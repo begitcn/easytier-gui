@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="512" height="512" rx="100" fill="#4A90E2"/>
+
+  <!-- Network nodes -->
+  <circle cx="256" cy="150" r="40" fill="white" opacity="0.9"/>
+  <circle cx="150" cy="300" r="40" fill="white" opacity="0.9"/>
+  <circle cx="362" cy="300" r="40" fill="white" opacity="0.9"/>
+  <circle cx="200" cy="400" r="30" fill="white" opacity="0.7"/>
+  <circle cx="312" cy="400" r="30" fill="white" opacity="0.7"/>
+
+  <!-- Connection lines -->
+  <line x1="256" y1="150" x2="150" y2="300" stroke="white" stroke-width="8" opacity="0.6"/>
+  <line x1="256" y1="150" x2="362" y2="300" stroke="white" stroke-width="8" opacity="0.6"/>
+  <line x1="150" y1="300" x2="362" y2="300" stroke="white" stroke-width="8" opacity="0.6"/>
+  <line x1="150" y1="300" x2="200" y2="400" stroke="white" stroke-width="6" opacity="0.5"/>
+  <line x1="362" y1="300" x2="312" y2="400" stroke="white" stroke-width="6" opacity="0.5"/>
+  <line x1="200" y1="400" x2="312" y2="400" stroke="white" stroke-width="6" opacity="0.5"/>
+
+  <!-- Center hub -->
+  <circle cx="256" cy="250" r="50" fill="#2E5C8A"/>
+  <circle cx="256" cy="250" r="35" fill="white"/>
+
+  <!-- E letter in center -->
+  <text x="256" y="265" font-family="Arial, sans-serif" font-size="40" font-weight="bold" fill="#4A90E2" text-anchor="middle">E</text>
+</svg>
