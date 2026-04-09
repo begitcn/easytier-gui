@@ -29,10 +29,19 @@ struct ContentView: View {
             Circle()
                 .fill(vm.status.color)
                 .frame(width: 8, height: 8)
+                .shadow(color: vm.status.color.opacity(0.6), radius: 3)
             Text(vm.status.description)
-                .font(.system(size: 12))
-                .foregroundColor(.secondary)
+                .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                .foregroundColor(vm.status.color)
         }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 4)
+        .background(vm.status.color.opacity(0.1))
+        .clipShape(Capsule())
+        .overlay(
+            Capsule()
+                .stroke(vm.status.color.opacity(0.3), lineWidth: 0.5)
+        )
     }
 }
 

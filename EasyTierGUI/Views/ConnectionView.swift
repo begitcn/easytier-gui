@@ -10,11 +10,11 @@ struct ConnectionView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 24) {
-                // Connection Status Card
-                StatusCard()
+                // Config List Section (Top)
+                ConfigListSection()
                     .environmentObject(vm)
 
-                // Configuration Section
+                // Configuration Section (Bottom)
                 if let config = vm.configManager.activeConfig {
                     ConfigFormView(config: config) { updatedConfig in
                         let index = vm.configManager.activeConfigIndex
@@ -25,14 +25,11 @@ struct ConnectionView: View {
                 } else {
                     Text("暂无可用配置")
                         .foregroundColor(.secondary)
+                        .padding(.top, 40)
                 }
-
-                // Config List Section
-                ConfigListSection()
-                    .environmentObject(vm)
             }
             .padding(32)
-            .frame(maxWidth: 600)
+            .frame(maxWidth: 880)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear {
@@ -45,78 +42,6 @@ struct ConnectionView: View {
 
 // MARK: - Status Card
 
-struct StatusCard: View {
-    @EnvironmentObject var vm: ProcessViewModel
-    @State private var isConnecting = false
-
-    var body: some View {
-        VStack(spacing: 16) {
-            // Status icon
-            ZStack {
-                Circle()
-                    .fill(vm.selectedStatus.color.opacity(0.2))
-                    .frame(width: 80, height: 80)
-
-                Image(systemName: vm.selectedStatus == .connected ? "checkmark.circle.fill" :
-                        vm.selectedStatus == .connecting ? "arrow.clockwise.circle.fill" :
-                        vm.selectedStatus == .error ? "xmark.circle.fill" :
-                        "network.slash")
-                    .font(.system(size: 36))
-                    .foregroundColor(vm.selectedStatus.color)
-            }
-
-            Text(vm.selectedStatus.description)
-                .font(.title2)
-                .fontWeight(.semibold)
-
-            if let errorMessage = vm.errorMessage {
-                Text(errorMessage)
-                    .font(.caption)
-                    .foregroundColor(.red)
-                    .textSelection(.enabled)
-            }
-
-            // Connect/Disconnect button
-            Button(action: toggleConnection) {
-                if isConnecting {
-                    ProgressView()
-                        .progressViewStyle(.circular)
-                        .frame(width: 20, height: 20)
-                } else {
-                    Label((vm.activeConfig.map(vm.isRunning) ?? false) ? "断开连接" : "连接",
-                          systemImage: (vm.activeConfig.map(vm.isRunning) ?? false) ? "wifi.slash" : "wifi")
-                }
-            }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
-            .tint((vm.activeConfig.map(vm.isRunning) ?? false) ? .red : .blue)
-            .disabled(isConnecting || vm.activeConfig == nil)
-            .task(id: vm.selectedStatus) {
-                isConnecting = false
-            }
-        }
-        .padding(32)
-        .frame(maxWidth: .infinity)
-        .background(Color(nsColor: .windowBackgroundColor))
-        .cornerRadius(12)
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
-        )
-    }
-
-    private func toggleConnection() {
-        Task {
-            isConnecting = true
-            if let activeConfig = vm.activeConfig, vm.isRunning(activeConfig) {
-                await vm.disconnect()
-            } else {
-                await vm.connect()
-            }
-            isConnecting = false
-        }
-    }
-}
 
 // MARK: - Config Form View
 
@@ -126,55 +51,79 @@ struct ConfigFormView: View {
     var onSave: (EasyTierConfig) -> Void
 
     var body: some View {
-        GroupBox("配置") {
-            Form {
-                Section(header: Text("基础设置")) {
-                    TextField("配置名称", text: $config.name)
-                    TextField("网络名称", text: $config.networkName)
-                    SecureField("网络密码", text: $config.networkPassword)
-                    TextField("服务器地址 (留空则作为服务器节点)", text: $config.serverURI)
-                }
-
-                Section(header: Text("高级设置")) {
-                    TextField("主机名 (留空使用系统主机名)", text: $config.hostname)
-
-                    Toggle("开启延迟优先模式", isOn: $config.enableLatencyFirst)
-                    Toggle("启用私有模式", isOn: $config.enablePrivateMode)
-                    Toggle("接受 DNS 配置", isOn: $config.enableMagicDNS)
-                    Toggle("启用多线程", isOn: $config.enableMultiThread)
-                    Toggle("启用KCP代理", isOn: $config.enableKCP)
-                }
-
-                Section(header: Text("TUN 设备")) {
-                    Toggle("使用 DHCP", isOn: $config.useDHCP)
-
-                    if !config.useDHCP {
-                        TextField("IPv4 地址/掩码 (例如: 192.168.55.13/24)", text: $config.tunConfig.ipv4)
-                            .disabled(config.useDHCP)
-                    }
-
-                    TextField("子网掩码", text: $config.tunConfig.netmask)
-                        .disabled(true)
-                    Stepper("MTU: \(config.tunConfig.mtu)", value: $config.tunConfig.mtu, in: 576...9000)
-                }
-
-                Section(header: Text("其他选项")) {
-                    Stepper("监听端口: \(config.listenPort)", value: $config.listenPort, in: 1...65535)
-                    Stepper("管理端口: \(config.rpcPortalPort)", value: $config.rpcPortalPort, in: 1...65535)
-                    Picker("日志级别", selection: $config.logLevel) {
-                        Text("调试").tag("debug")
-                        Text("信息").tag("info")
-                        Text("警告").tag("warn")
-                        Text("错误").tag("error")
-                    }
-                }
-
-                Section(header: Text("节点")) {
-                    PeerListEditor(peers: $config.peers)
-                }
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Text("配置设置")
+                    .font(.system(.title3, design: .rounded).weight(.semibold))
+                    .foregroundColor(.primary)
+                    .padding(.horizontal, 4)
+                Spacer()
+                Text("* 为必填项")
+                    .font(.caption)
+                    .foregroundColor(.red.opacity(0.8))
+                    .padding(.horizontal, 4)
             }
-            .formStyle(.grouped)
-            .padding(.horizontal)
+
+            HStack(alignment: .top, spacing: 16) {
+                // Left Column
+                Form {
+                    Section(header: Text("基础设置").font(.system(.subheadline, design: .rounded))) {
+                        requiredField(label: "配置名称", text: $config.name)
+                        requiredField(label: "网络名称", text: $config.networkName)
+                        requiredSecureField(label: "网络密码", text: $config.networkPassword)
+                        requiredField(label: "服务器地址", text: $config.serverURI)
+                    }
+
+                    Section(header: Text("TUN 设备").font(.system(.subheadline, design: .rounded))) {
+                        Toggle("使用 DHCP", isOn: $config.useDHCP)
+
+                        if !config.useDHCP {
+                            TextField("IPv4 地址/掩码 (例如: 192.168.55.13/24)", text: $config.tunConfig.ipv4)
+                                .disabled(config.useDHCP)
+                        }
+
+                        TextField("子网掩码", text: $config.tunConfig.netmask)
+                            .disabled(true)
+                        Stepper("MTU: \(config.tunConfig.mtu)", value: $config.tunConfig.mtu, in: 576...9000)
+                    }
+                }
+                .formStyle(.grouped)
+                .scrollContentBackground(.hidden)
+                .background(Color.clear)
+
+                // Right Column
+                Form {
+                    Section(header: Text("高级设置")) {
+                        TextField("主机名", text: $config.hostname)
+                            .onAppear {
+                                if config.hostname.isEmpty {
+                                    config.hostname = ProcessInfo.processInfo.hostName
+                                }
+                            }
+
+                        Toggle("开启延迟优先模式", isOn: $config.enableLatencyFirst)
+                        Toggle("启用私有模式", isOn: $config.enablePrivateMode)
+                        Toggle("接受 DNS 配置", isOn: $config.enableMagicDNS)
+                        Toggle("启用多线程", isOn: $config.enableMultiThread)
+                        Toggle("启用KCP代理", isOn: $config.enableKCP)
+                    }
+
+                    Section(header: Text("其他选项")) {
+                        Stepper("监听端口: \(config.listenPort)", value: $config.listenPort, in: 1...65535)
+                        Stepper("管理端口: \(config.rpcPortalPort)", value: $config.rpcPortalPort, in: 1...65535)
+                        Picker("日志级别", selection: $config.logLevel) {
+                            Text("调试").tag("debug")
+                            Text("信息").tag("info")
+                            Text("警告").tag("warn")
+                            Text("错误").tag("error")
+                        }
+                    }
+                }
+                .formStyle(.grouped)
+                .scrollContentBackground(.hidden)
+                .background(Color.clear)
+            }
+            .frame(minHeight: 380)
             .disabled(vm.activeConfig.map(vm.isRunning) ?? false)
             .onChange(of: config) { _, newValue in
                 onSave(newValue)
@@ -185,114 +134,189 @@ struct ConfigFormView: View {
                 }
             }
         }
+        .padding(24)
+        .background(.ultraThinMaterial)
+        .cornerRadius(24)
+        .overlay(
+            RoundedRectangle(cornerRadius: 24)
+                .stroke(Color.white.opacity(0.15), lineWidth: 1)
+        )
     }
-}
 
-// MARK: - Peer List Editor
-
-struct PeerListEditor: View {
-    @Binding var peers: [String]
-    @State private var newPeer = ""
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            ForEach(peers.indices, id: \.self) { index in
-                HStack {
-                    Text(peers[index])
-                        .font(.system(.body, design: .monospaced))
-                    Spacer()
-                    Button(action: { peers.remove(at: index) }) {
-                        Image(systemName: "minus.circle.fill")
-                            .foregroundColor(.red)
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-
-            HStack {
-                TextField("输入节点地址", text: $newPeer)
-                    .onSubmit { addPeer() }
-                Button("添加") { addPeer() }
-                    .disabled(newPeer.isEmpty)
-            }
+    @ViewBuilder
+    private func requiredField(label: String, text: Binding<String>) -> some View {
+        HStack(spacing: 4) {
+            Text(label)
+                .foregroundColor(.primary)
+                .layoutPriority(1)
+            Text("*")
+                .foregroundColor(.red)
+                .fontWeight(.bold)
+            Spacer()
+            TextField("", text: text)
+                .multilineTextAlignment(.trailing)
         }
     }
 
-    private func addPeer() {
-        let trimmed = newPeer.trimmingCharacters(in: .whitespaces)
-        guard !trimmed.isEmpty else { return }
-        peers.append(trimmed)
-        newPeer = ""
+    @ViewBuilder
+    private func requiredSecureField(label: String, text: Binding<String>) -> some View {
+        HStack(spacing: 4) {
+            Text(label)
+                .foregroundColor(.primary)
+                .layoutPriority(1)
+            Text("*")
+                .foregroundColor(.red)
+                .fontWeight(.bold)
+            Spacer()
+            SecureField("", text: text)
+                .multilineTextAlignment(.trailing)
+        }
     }
 }
+
+
 
 // MARK: - Config List Section
 
 struct ConfigListSection: View {
     @EnvironmentObject var vm: ProcessViewModel
+    @State private var showValidationAlert = false
+    @State private var validationMessage = ""
 
     var body: some View {
-        GroupBox("虚拟网络") {
-            VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("虚拟网络")
+                .font(.system(.title3, design: .rounded).weight(.semibold))
+                .foregroundColor(.primary)
+                .padding(.horizontal, 4)
+
+            VStack(spacing: 12) {
                 ForEach(vm.configManager.configs.indices, id: \.self) { index in
                     let config = vm.configManager.configs[index]
                     let isRunning = vm.isRunning(config)
-                    HStack {
-                        Button(action: {
-                            vm.configManager.setActiveConfig(at: index)
-                        }) {
+                    let isActive = vm.configManager.activeConfigIndex == index
+                    
+                    HStack(spacing: 16) {
+                        Image(systemName: isActive ? "checkmark.circle.fill" : "circle")
+                            .font(.system(size: 20))
+                            .foregroundColor(isActive ? .accentColor : .secondary.opacity(0.5))
+
+                        VStack(alignment: .leading, spacing: 4) {
                             HStack {
-                                Image(systemName: vm.configManager.activeConfigIndex == index ?
-                                      "checkmark.circle.fill" : "circle")
-                                    .foregroundColor(vm.configManager.activeConfigIndex == index ? .blue : .secondary)
                                 Text(config.name)
-                                if vm.configManager.activeConfigIndex == index {
-                                    Text("(当前)")
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                }
+                                    .font(.system(.body, design: .rounded))
+                                    .fontWeight(isActive ? .bold : .regular)
+                                
                                 if isRunning {
-                                    Text("(运行中)")
-                                        .font(.caption)
+                                    Text("运行中")
+                                        .font(.system(size: 10, weight: .bold))
+                                        .padding(.horizontal, 6)
+                                        .padding(.vertical, 2)
+                                        .background(Color.green.opacity(0.2))
                                         .foregroundColor(.green)
+                                        .clipShape(Capsule())
                                 }
                             }
+                            
+                            Text(config.networkName.isEmpty ? "未命名网络" : config.networkName)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
                         }
-                        .buttonStyle(.plain)
 
                         Spacer()
 
                         Button(isRunning ? "断开" : "连接") {
-                            Task {
-                                if isRunning {
-                                    await vm.disconnect(configID: config.id)
+                            if isRunning {
+                                Task { await vm.disconnect(configID: config.id) }
+                            } else {
+                                // Validate required fields
+                                if let msg = validateConfig(config) {
+                                    validationMessage = msg
+                                    showValidationAlert = true
                                 } else {
-                                    await vm.connect(configID: config.id)
+                                    Task { await vm.connect(configID: config.id) }
                                 }
                             }
                         }
-                        .buttonStyle(.bordered)
+                        .buttonStyle(.plain)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(isRunning ? Color.red.opacity(0.15) : Color.blue.opacity(0.15))
+                        .foregroundColor(isRunning ? .red : .blue)
+                        .cornerRadius(8)
 
                         Button(action: {
-                            vm.configManager.deleteConfig(at: index)
+                            withAnimation {
+                                vm.configManager.deleteConfig(at: index)
+                            }
                         }) {
                             Image(systemName: "trash")
-                                .foregroundColor(.red)
+                                .foregroundColor(.red.opacity(0.8))
+                                .frame(width: 32, height: 32)
+                                .background(Color.red.opacity(0.1))
+                                .cornerRadius(8)
                         }
                         .buttonStyle(.plain)
                         .disabled(isRunning || vm.configManager.configs.count <= 1)
+                        .opacity((isRunning || vm.configManager.configs.count <= 1) ? 0.3 : 1)
                     }
-                    .padding(.vertical, 2)
+                    .padding(16)
+                    .background(isActive ? Color.accentColor.opacity(0.1) : Color(NSColor.controlBackgroundColor).opacity(0.3))
+                    .cornerRadius(16)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16)
+                            .stroke(isActive ? Color.accentColor.opacity(0.4) : Color.white.opacity(0.05), lineWidth: 1)
+                    )
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        withAnimation {
+                            vm.configManager.setActiveConfig(at: index)
+                        }
+                    }
                 }
             }
-            .padding(.horizontal)
-            .padding(.vertical, 8)
-        }
 
-        Button("添加虚拟网络", systemImage: "plus") {
-            vm.addNewConfig()
+            Button(action: {
+                withAnimation {
+                    vm.addNewConfig()
+                }
+            }) {
+                HStack {
+                    Image(systemName: "plus.circle.fill")
+                    Text("添加虚拟网络")
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .background(Color(NSColor.controlBackgroundColor).opacity(0.3))
+                .cornerRadius(12)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.1), style: StrokeStyle(lineWidth: 1, dash: [5]))
+                )
+            }
+            .buttonStyle(.plain)
         }
-        .buttonStyle(.bordered)
+        .padding(24)
+        .background(.ultraThinMaterial)
+        .cornerRadius(24)
+        .overlay(
+            RoundedRectangle(cornerRadius: 24)
+                .stroke(Color.white.opacity(0.15), lineWidth: 1)
+        )
+        .alert("必填项未完成", isPresented: $showValidationAlert) {
+            Button("好的", role: .cancel) {}
+        } message: {
+            Text(validationMessage)
+        }
+    }
+
+    private func validateConfig(_ config: EasyTierConfig) -> String? {
+        var missing: [String] = []
+        if config.name.trimmingCharacters(in: .whitespaces).isEmpty { missing.append("配置名称") }
+        if config.networkName.trimmingCharacters(in: .whitespaces).isEmpty { missing.append("网络名称") }
+        if config.networkPassword.trimmingCharacters(in: .whitespaces).isEmpty { missing.append("网络密码") }
+        if config.serverURI.trimmingCharacters(in: .whitespaces).isEmpty { missing.append("服务器地址") }
+        guard !missing.isEmpty else { return nil }
+        return "以下必填项不能为空：\n" + missing.map { "• \($0)" }.joined(separator: "\n")
     }
 }
 

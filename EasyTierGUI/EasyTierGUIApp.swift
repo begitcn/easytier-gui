@@ -5,11 +5,41 @@ struct EasyTierGUIApp: App {
     @StateObject private var processVM = ProcessViewModel()
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
+    init() {
+        // Register default values for AppStorage
+        UserDefaults.standard.register(defaults: [
+            "showDockIcon": true,
+            "showMenuBar": true
+        ])
+    }
+
     var body: some Scene {
         WindowGroup {
             ContentView()
                 .environmentObject(processVM)
                 .frame(minWidth: 700, minHeight: 500)
+                .onReceive(NotificationCenter.default.publisher(for: NSApplication.willTerminateNotification)) { _ in
+                    processVM.forceStopAllSync()
+                }
+                .onReceive(NotificationCenter.default.publisher(for: NSApplication.didFinishLaunchingNotification)) { _ in
+                    let autoConnect = UserDefaults.standard.bool(forKey: "autoConnectOnLaunch")
+                    if autoConnect {
+                        Task {
+                            // Short delay to let the UI settle before connecting
+                            try? await Task.sleep(nanoseconds: 800_000_000)
+                            await processVM.connect()
+                        }
+                    }
+                }
+                .onReceive(NotificationCenter.default.publisher(for: NSWindow.willCloseNotification)) { notification in
+                    if let window = notification.object as? NSWindow, window.isKeyWindow {
+                        // When the main window closes, check if we should hide the Dock icon
+                        let showDock = UserDefaults.standard.bool(forKey: "showDockIcon")
+                        if !showDock {
+                            AppDelegate.shared?.setDockIconVisible(false)
+                        }
+                    }
+                }
         }
         .windowStyle(.hiddenTitleBar)
         .commands {
@@ -28,14 +58,52 @@ struct EasyTierGUIApp: App {
 }
 
 class AppDelegate: NSObject, NSApplicationDelegate {
+    static private(set) var shared: AppDelegate?
+
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        // Only terminate if the Dock icon is visible, or if the user explicitly quits
+        // If dock icon is hidden, we keep the app running in the background (Menu Bar)
         return false
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        AppDelegate.shared = self
         // Create menu bar icon
         MenuBarManager.shared.setupMenuBar()
         checkRootPrivileges()
+
+        // Application starts with window visible, so ensure it's in .regular mode initially
+        // regardless of preference, because the Dock icon should be visible while window is open.
+        setDockIconVisible(true)
+    }
+
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        if !flag {
+            showMainWindowWithDock()
+        }
+        return true
+    }
+
+    func showMainWindowWithDock() {
+        setDockIconVisible(true)
+        DispatchQueue.main.async {
+            NSApp.unhide(nil)
+            if let window = NSApplication.shared.windows.first {
+                window.makeKeyAndOrderFront(nil)
+                window.orderFrontRegardless()
+                NSApp.activate(ignoringOtherApps: true)
+            }
+        }
+    }
+
+    func setDockIconVisible(_ visible: Bool) {
+        DispatchQueue.main.async {
+            if visible {
+                NSApp.setActivationPolicy(.regular)
+            } else {
+                NSApp.setActivationPolicy(.accessory)
+            }
+        }
     }
 
     private func checkRootPrivileges() {

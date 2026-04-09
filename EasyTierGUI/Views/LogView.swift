@@ -34,104 +34,151 @@ struct LogView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Toolbar
-            HStack(spacing: 12) {
-                // Level filter
-                Picker("级别", selection: $selectedLevel) {
-                    ForEach(logLevels, id: \.self) { level in
-                        Text(level).tag(level)
-                    }
-                }
-                .pickerStyle(.segmented)
-                .frame(width: 250)
+            Text("运行日志")
+                .font(.system(.title2, design: .rounded).weight(.bold))
+                .foregroundColor(.primary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 24)
+                .padding(.top, 24)
+                .padding(.bottom, 8)
 
-                // Search
-                TextField("搜索日志...", text: $searchText)
-                    .textFieldStyle(.roundedBorder)
-                    .frame(maxWidth: 250)
-
-                Spacer()
-
-                // Auto-scroll toggle
-                Toggle("自动滚动", isOn: $autoScroll)
-                    .labelsHidden()
-                    .toggleStyle(.switch)
-
-                // Clear button
-                Button("清空", systemImage: "trash") {
-                    vm.clearActiveLogs()
-                }
-                .buttonStyle(.bordered)
-
-                // Export button
-                Button("导出", systemImage: "square.and.arrow.up") {
-                    exportLogs()
-                }
-                .buttonStyle(.bordered)
-            }
-            .padding()
-
-            Divider()
-
-            // Log Content
-            if filteredLogs.isEmpty {
-                ContentUnavailableView(
-                    "暂无日志",
-                    systemImage: "doc.text",
-                    description: Text("EasyTier 运行时日志将显示在这里")
-                )
-            } else {
-                ScrollViewReader { proxy in
-                    ScrollView {
-                        LazyVStack(alignment: .leading, spacing: 0) {
-                            ForEach(Array(filteredLogs.enumerated()), id: \.element.id) { index, log in
-                                LogEntryRow(entry: log, showIndex: index)
-                                    .id(log.id)
-                            }
-                        }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                    }
-                    .onChange(of: filteredLogs.count) { _, _ in
-                        if autoScroll, let lastLog = filteredLogs.last {
-                            withAnimation(.easeOut.speed(0.5)) {
-                                proxy.scrollTo(lastLog.id, anchor: .bottom)
-                            }
+            VStack(spacing: 0) {
+                // Toolbar
+                HStack(spacing: 16) {
+                    // Level filter
+                    Picker("", selection: $selectedLevel) {
+                        ForEach(logLevels, id: \.self) { level in
+                            Text(level).tag(level)
                         }
                     }
+                    .pickerStyle(.menu)
+                    .frame(width: 140)
+
+                    // Search
+                    HStack {
+                        Image(systemName: "magnifyingglass").foregroundColor(.secondary)
+                        TextField("过滤日志消息...", text: $searchText)
+                            .textFieldStyle(.plain)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(Color(NSColor.controlBackgroundColor).opacity(0.5))
+                    .cornerRadius(8)
+                    .frame(maxWidth: 300)
+
+                    Spacer()
+
+                    // Controls
+                    Toggle("自动滚动", isOn: $autoScroll)
+                        .toggleStyle(.switch)
+                        .padding(.trailing, 8)
+
+                    Button(action: {
+                        exportLogs()
+                    }) {
+                        Image(systemName: "square.and.arrow.up")
+                            .frame(width: 32, height: 32)
+                            .background(Color(NSColor.controlBackgroundColor).opacity(0.5))
+                            .cornerRadius(8)
+                    }
+                    .buttonStyle(.plain)
+
+                    Button(action: {
+                        vm.clearActiveLogs()
+                    }) {
+                        Image(systemName: "trash")
+                            .foregroundColor(.red.opacity(0.8))
+                            .frame(width: 32, height: 32)
+                            .background(Color.red.opacity(0.1))
+                            .cornerRadius(8)
+                    }
+                    .buttonStyle(.plain)
                 }
-            }
+                .padding(20)
 
-            Divider()
+                // Log Content
+                if filteredLogs.isEmpty {
+                    ContentUnavailableView(
+                        "暂无日志",
+                        systemImage: "doc.text.magnifyingglass",
+                        description: Text("当前过滤条件下没有记录或网络未运行")
+                    )
+                    .frame(maxHeight: .infinity)
+                } else {
+                    ScrollViewReader { proxy in
+                        ScrollView {
+                            LazyVStack(alignment: .leading, spacing: 6) {
+                                ForEach(Array(filteredLogs.enumerated()), id: \.element.id) { index, log in
+                                    LogEntryRow(entry: log, showIndex: index)
+                                        .id(log.id)
+                                }
+                            }
+                            .padding(.horizontal, 20)
+                            .padding(.bottom, 20)
+                        }
+                        .onChange(of: filteredLogs.count) { _, _ in
+                            if autoScroll, let lastLog = filteredLogs.last {
+                                withAnimation(.easeOut.speed(0.5)) {
+                                    proxy.scrollTo(lastLog.id, anchor: .bottom)
+                                }
+                            }
+                        }
+                    }
+                }
 
-            // Status bar
-            HStack {
-                Text("\(filteredLogs.count) 条记录")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-
-                Spacer()
-
-                Text(vm.activeConfig?.name ?? "未选择网络")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-
-                Spacer()
-
-                if vm.activeRuntime?.service.isRunning ?? false {
-                    Image(systemName: "circle.fill")
-                        .font(.system(size: 6))
-                        .foregroundColor(.green)
-                    Text("实时")
-                        .font(.caption)
+                // Status bar
+                HStack {
+                    Text("\(filteredLogs.count) 条记录")
+                        .font(.system(.caption, design: .rounded))
                         .foregroundColor(.secondary)
+
+                    Spacer()
+
+                    if let activeName = vm.activeConfig?.name {
+                        Text(activeName)
+                            .font(.system(.caption, design: .rounded).weight(.semibold))
+                            .foregroundColor(.primary)
+                    } else {
+                        Text("未选择网络")
+                            .font(.system(.caption, design: .rounded))
+                            .foregroundColor(.secondary)
+                    }
+
+                    Spacer()
+
+                    if vm.activeRuntime?.service.isRunning ?? false {
+                        HStack(spacing: 4) {
+                            Circle()
+                                .fill(Color.green)
+                                .frame(width: 8, height: 8)
+                                .shadow(color: .green.opacity(0.5), radius: 2)
+                            Text("实时监控")
+                                .font(.system(.caption, design: .rounded))
+                                .foregroundColor(.green)
+                        }
+                    } else {
+                        Text("已停止")
+                            .font(.system(.caption, design: .rounded))
+                            .foregroundColor(.secondary)
+                    }
                 }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 12)
+                .background(Color.black.opacity(0.1))
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 4)
-            .background(Color(nsColor: .windowBackgroundColor))
+            .background(.ultraThinMaterial)
+            .cornerRadius(24)
+            .overlay(
+                RoundedRectangle(cornerRadius: 24)
+                    .stroke(Color.white.opacity(0.15), lineWidth: 1)
+            )
+            .shadow(color: Color.black.opacity(0.1), radius: 15, y: 5)
+            .padding(.horizontal, 24)
+            .padding(.bottom, 24)
+            .clipShape(RoundedRectangle(cornerRadius: 24))
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(NSColor.windowBackgroundColor))
     }
 
     // MARK: - Export
@@ -166,27 +213,34 @@ struct LogEntryRow: View {
     let showIndex: Int
 
     var body: some View {
-        HStack(alignment: .top, spacing: 8) {
-            Text(entry.timestamp.formatted(date: .abbreviated, time: .standard))
+        HStack(alignment: .top, spacing: 12) {
+            Text(entry.timestamp.formatted(date: .omitted, time: .standard))
                 .font(.system(.caption, design: .monospaced))
                 .foregroundColor(.secondary)
-                .frame(width: 140, alignment: .leading)
+                .frame(width: 80, alignment: .leading)
+                .padding(.top, 4)
 
             Text(entry.level.uppercased())
-                .font(.caption.monospaced())
-                .fontWeight(.medium)
+                .font(.system(size: 10, weight: .bold, design: .monospaced))
                 .foregroundColor(entry.levelColor)
-                .frame(width: 50, alignment: .leading)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 3)
+                .background(entry.levelColor.opacity(0.15))
+                .clipShape(Capsule())
+                .frame(width: 60, alignment: .leading)
+                .padding(.top, 2)
 
             Text(entry.message)
                 .font(.system(.body, design: .monospaced))
+                .foregroundColor(.primary.opacity(0.9))
                 .textSelection(.enabled)
                 .lineLimit(nil)
+                .padding(.top, 2)
         }
-        .padding(.vertical, 3)
-        .padding(.horizontal, 4)
+        .padding(.vertical, 8)
+        .padding(.horizontal, 12)
         .background(logBackgroundColor)
-        .cornerRadius(3)
+        .cornerRadius(8)
     }
 
     private var logBackgroundColor: Color {
@@ -196,7 +250,7 @@ struct LogEntryRow: View {
         case "warn", "warning":
             return Color.orange.opacity(0.08)
         default:
-            return Color.clear
+            return showIndex % 2 == 0 ? Color(NSColor.controlBackgroundColor).opacity(0.2) : Color.clear
         }
     }
 }

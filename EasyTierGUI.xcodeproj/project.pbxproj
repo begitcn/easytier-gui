@@ -37,7 +37,7 @@
 		A2000000000000000000000C /* MenuBarManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarManager.swift; sourceTree = "<group>"; };
 		A2000000000000000000000D /* PrivilegedExecutor.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = PrivilegedExecutor.m; sourceTree = "<group>"; };
 		A2000000000000000000000E /* PrivilegedExecutor.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PrivilegedExecutor.h; sourceTree = "<group>"; };
-		A2000000000000000000000F /* EasyTierGUI-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = EasyTierGUI-Bridging-Header.h; sourceTree = "<group>"; };
+		A2000000000000000000000F /* EasyTierGUI-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "EasyTierGUI-Bridging-Header.h"; sourceTree = "<group>"; };
 		A30000000000000000000001 /* EasyTierGUI.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = EasyTierGUI.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -336,8 +336,8 @@
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = cn.begitcn.EasyTierGUI;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_OBJC_BRIDGING_HEADER = EasyTierGUI/EasyTierGUI-Bridging-Header.h;
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = "EasyTierGUI/EasyTierGUI-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 			};
 			name = Debug;
@@ -360,8 +360,8 @@
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = cn.begitcn.EasyTierGUI;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_OBJC_BRIDGING_HEADER = EasyTierGUI/EasyTierGUI-Bridging-Header.h;
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = "EasyTierGUI/EasyTierGUI-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 			};
 			name = Release;

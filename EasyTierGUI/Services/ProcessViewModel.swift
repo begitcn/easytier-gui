@@ -70,7 +70,9 @@ final class NetworkRuntime: ObservableObject, Identifiable {
     private func startPeerPolling() {
         peerTimer?.invalidate()
         peerTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { [weak self] _ in
-            self?.fetchPeers()
+            Task {@MainActor in
+                self?.fetchPeers()
+            }
         }
         fetchPeers()
     }
@@ -223,6 +225,12 @@ class ProcessViewModel: ObservableObject {
         }
     }
 
+    func forceStopAllSync() {
+        for runtime in runtimes.values {
+            runtime.service.forceStop()
+        }
+    }
+
     func addNewConfig() {
         let config = EasyTierConfig(name: "网络 \(configManager.configs.count + 1)")
         configManager.addConfig(config)
@@ -262,9 +270,13 @@ class ProcessViewModel: ObservableObject {
             runtimes.removeValue(forKey: id)
         }
     }
-
     private func refreshOverallStatus() {
         let statuses = runtimes.values.map(\.status)
+        
+        // Collect detailed status for each network
+        let detailedStatuses = configManager.configs.map { config in
+            (name: config.name, status: status(for: config))
+        }
 
         if statuses.contains(.error) {
             status = .error
@@ -276,7 +288,7 @@ class ProcessViewModel: ObservableObject {
             status = .disconnected
         }
 
-        MenuBarManager.shared.updateStatus(status)
+        MenuBarManager.shared.updateStatus(status, networkStatuses: detailedStatuses)
     }
 }
 

@@ -237,9 +237,16 @@ class EasyTierService: ObservableObject {
     }
 
     func forceStop() {
-        process?.terminate()
-        process = nil
-        privilegedPID = nil
+        if let process = process {
+            process.terminate()
+        }
+        
+        if privilegedPID != nil || getuid() != 0 {
+            try? stopPrivileged()
+        }
+        
+        self.process = nil
+        self.privilegedPID = nil
         stopPrivilegedLogPolling()
         publishRunning(false)
     }
