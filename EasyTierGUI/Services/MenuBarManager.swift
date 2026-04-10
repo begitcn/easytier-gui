@@ -114,18 +114,42 @@ class MenuBarManager: ObservableObject {
             let header = NSMenuItem(title: "虚拟组网状态:", action: nil, keyEquivalent: "")
             header.isEnabled = false
             menu.addItem(header)
-            
+
             for (name, status) in networkStatuses {
-                let dot = status == .connected ? "●" : (status == .connecting ? "○" : "○")
-                let item = NSMenuItem(title: "  \(dot) \(name): \(status.description)", action: nil, keyEquivalent: "")
-                // We could add actions here to connect/disconnect if needed
+                let item = NSMenuItem(title: "", action: nil, keyEquivalent: "")
+
+                // Create attributed string with colored dot
+                let dotColor: NSColor
+                let dotSymbol: String
+                switch status {
+                case .connected:
+                    dotColor = .systemGreen
+                    dotSymbol = "●"
+                case .connecting:
+                    dotColor = .systemOrange
+                    dotSymbol = "●"
+                case .disconnected, .error:
+                    dotColor = .systemRed
+                    dotSymbol = "●"
+                }
+
+                let fullText = "  \(dotSymbol) \(name): \(status.description)"
+                let attributedString = NSMutableAttributedString(string: fullText)
+
+                // Find and color the dot (first character after spaces)
+                if let dotRange = fullText.range(of: dotSymbol) {
+                    let nsRange = NSRange(dotRange, in: fullText)
+                    attributedString.addAttribute(.foregroundColor, value: dotColor, range: nsRange)
+                }
+
+                item.attributedTitle = attributedString
                 menu.addItem(item)
             }
         }
 
         menu.addItem(NSMenuItem.separator())
 
-        menu.addItem(NSMenuItem(title: "打开 EasyTier", action: #selector(AppDelegate.openMainWindow(_:)), keyEquivalent: ""))
+        menu.addItem(NSMenuItem(title: "显示主界面", action: #selector(AppDelegate.openMainWindow(_:)), keyEquivalent: ""))
         menu.addItem(NSMenuItem(title: "退出", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
 
         return menu
@@ -134,6 +158,10 @@ class MenuBarManager: ObservableObject {
 
 extension AppDelegate {
     @objc func openMainWindow(_ sender: Any) {
-        AppDelegate.shared?.showMainWindowWithDock()
+        // Opening a window directly from an NSMenu callback is unreliable on macOS
+        // until the menu has finished closing.
+        DispatchQueue.main.async {
+            AppDelegate.shared?.showMainWindowWithDock()
+        }
     }
 }

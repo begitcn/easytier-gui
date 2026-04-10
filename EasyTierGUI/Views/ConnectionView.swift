@@ -1,4 +1,6 @@
 import SwiftUI
+import AppKit
+import UniformTypeIdentifiers
 
 // MARK: - ConnectionView
 // View for managing EasyTier connection and network configuration
@@ -182,20 +184,61 @@ struct ConfigListSection: View {
     @EnvironmentObject var vm: ProcessViewModel
     @State private var showValidationAlert = false
     @State private var validationMessage = ""
+    @State private var showExportSuccess = false
+    @State private var showImportError = false
+    @State private var importErrorMessage = ""
+    @State private var showExportAllSuccess = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("虚拟网络")
-                .font(.system(.title3, design: .rounded).weight(.semibold))
-                .foregroundColor(.primary)
-                .padding(.horizontal, 4)
+            HStack {
+                Text("虚拟网络")
+                    .font(.system(.title3, design: .rounded).weight(.semibold))
+                    .foregroundColor(.primary)
+                    .padding(.horizontal, 4)
+
+                Spacer()
+
+                // 导入导出按钮
+                HStack(spacing: 8) {
+                    Button(action: { importConfig() }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "square.and.arrow.down")
+                            Text("导入")
+                        }
+                        .font(.system(size: 12, weight: .medium))
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Color.blue.opacity(0.1))
+                    .foregroundColor(.blue)
+                    .cornerRadius(6)
+
+                    Button(action: { exportAllConfigs() }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "square.and.arrow.up")
+                            Text("导出全部")
+                        }
+                        .font(.system(size: 12, weight: .medium))
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Color.green.opacity(0.1))
+                    .foregroundColor(.green)
+                    .cornerRadius(6)
+                    .disabled(vm.configManager.configs.isEmpty)
+                    .opacity(vm.configManager.configs.isEmpty ? 0.5 : 1)
+                }
+            }
 
             VStack(spacing: 12) {
                 ForEach(vm.configManager.configs.indices, id: \.self) { index in
                     let config = vm.configManager.configs[index]
                     let isRunning = vm.isRunning(config)
                     let isActive = vm.configManager.activeConfigIndex == index
-                    
+
                     HStack(spacing: 16) {
                         Image(systemName: isActive ? "checkmark.circle.fill" : "circle")
                             .font(.system(size: 20))
@@ -206,7 +249,7 @@ struct ConfigListSection: View {
                                 Text(config.name)
                                     .font(.system(.body, design: .rounded))
                                     .fontWeight(isActive ? .bold : .regular)
-                                
+
                                 if isRunning {
                                     Text("运行中")
                                         .font(.system(size: 10, weight: .bold))
@@ -217,13 +260,24 @@ struct ConfigListSection: View {
                                         .clipShape(Capsule())
                                 }
                             }
-                            
+
                             Text(config.networkName.isEmpty ? "未命名网络" : config.networkName)
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }
 
                         Spacer()
+
+                        // 单个配置的导出按钮
+                        Button(action: { exportConfig(config) }) {
+                            Image(systemName: "arrow.up.doc")
+                                .foregroundColor(.secondary)
+                                .frame(width: 28, height: 28)
+                                .background(Color.secondary.opacity(0.1))
+                                .cornerRadius(6)
+                        }
+                        .buttonStyle(.plain)
+                        .help("导出此配置")
 
                         Button(isRunning ? "断开" : "连接") {
                             if isRunning {
@@ -306,6 +360,87 @@ struct ConfigListSection: View {
             Button("好的", role: .cancel) {}
         } message: {
             Text(validationMessage)
+        }
+        .alert("导出成功", isPresented: $showExportSuccess) {
+            Button("好的", role: .cancel) {}
+        } message: {
+            Text("配置已成功导出")
+        }
+        .alert("导入失败", isPresented: $showImportError) {
+            Button("好的", role: .cancel) {}
+        } message: {
+            Text(importErrorMessage)
+        }
+        .alert("导出成功", isPresented: $showExportAllSuccess) {
+            Button("好的", role: .cancel) {}
+        } message: {
+            Text("所有配置已成功导出")
+        }
+    }
+
+    // MARK: - Import/Export Methods
+
+    private func importConfig() {
+        let panel = NSOpenPanel()
+        panel.allowsMultipleSelection = false
+        panel.canChooseDirectories = false
+        panel.canCreateDirectories = false
+        panel.allowedContentTypes = [.json]
+        panel.title = "选择配置文件"
+        panel.message = "选择要导入的 EasyTier 配置文件"
+
+        if panel.runModal() == .OK, let url = panel.url {
+            do {
+                let config = try vm.configManager.importConfig(from: url)
+                // 检查是否已存在相同 ID 的配置
+                if vm.configManager.configs.contains(where: { $0.id == config.id }) {
+                    // 生成新的 ID 避免冲突
+                    var newConfig = config
+                    newConfig.id = UUID()
+                    vm.configManager.addConfig(newConfig)
+                } else {
+                    vm.configManager.addConfig(config)
+                }
+            } catch {
+                importErrorMessage = "无法读取配置文件：\(error.localizedDescription)"
+                showImportError = true
+            }
+        }
+    }
+
+    private func exportConfig(_ config: EasyTierConfig) {
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = [.json]
+        panel.title = "保存配置文件"
+        panel.message = "选择配置文件的保存位置"
+        panel.nameFieldStringValue = "\(config.name).json"
+
+        if panel.runModal() == .OK, let url = panel.url {
+            do {
+                try vm.configManager.exportConfig(config, to: url)
+                showExportSuccess = true
+            } catch {
+                importErrorMessage = "导出失败：\(error.localizedDescription)"
+                showImportError = true
+            }
+        }
+    }
+
+    private func exportAllConfigs() {
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = [.json]
+        panel.title = "导出所有配置"
+        panel.message = "选择配置文件的保存位置"
+        panel.nameFieldStringValue = "EasyTier_全部配置.json"
+
+        if panel.runModal() == .OK, let url = panel.url {
+            do {
+                try vm.configManager.exportAllConfigs(to: url)
+                showExportAllSuccess = true
+            } catch {
+                importErrorMessage = "导出失败：\(error.localizedDescription)"
+                showImportError = true
+            }
         }
     }
 

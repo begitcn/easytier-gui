@@ -1,5 +1,42 @@
 import SwiftUI
 
+private struct MainWindowAccessor: NSViewRepresentable {
+    let onResolve: (NSWindow) -> Void
+
+    func makeNSView(context: Context) -> NSView {
+        let view = NSView()
+        DispatchQueue.main.async {
+            if let window = view.window {
+                onResolve(window)
+            }
+        }
+        return view
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {
+        DispatchQueue.main.async {
+            if let window = nsView.window {
+                onResolve(window)
+            }
+        }
+    }
+}
+
+private struct MainWindowSceneBridge: View {
+    @Environment(\.openWindow) private var openWindow
+    let onResolve: (@escaping () -> Void) -> Void
+
+    var body: some View {
+        Color.clear
+            .frame(width: 0, height: 0)
+            .onAppear {
+                onResolve {
+                    openWindow(id: "main")
+                }
+            }
+    }
+}
+
 @main
 struct EasyTierGUIApp: App {
     @StateObject private var processVM = ProcessViewModel()
@@ -14,12 +51,22 @@ struct EasyTierGUIApp: App {
     }
 
     var body: some Scene {
-        WindowGroup {
+        WindowGroup(id: "main") {
             ContentView()
                 .environmentObject(processVM)
                 .frame(minWidth: 700, minHeight: 500)
-                .onReceive(NotificationCenter.default.publisher(for: NSApplication.willTerminateNotification)) { _ in
-                    processVM.forceStopAllSync()
+                .background(
+                    MainWindowAccessor { window in
+                        appDelegate.configureMainWindow(window)
+                    }
+                )
+                .overlay(
+                    MainWindowSceneBridge { openAction in
+                        appDelegate.setOpenMainWindowAction(openAction)
+                    }
+                )
+                .onAppear {
+                    appDelegate.processVM = processVM
                 }
                 .onReceive(NotificationCenter.default.publisher(for: NSApplication.didFinishLaunchingNotification)) { _ in
                     let autoConnect = UserDefaults.standard.bool(forKey: "autoConnectOnLaunch")
@@ -42,6 +89,7 @@ struct EasyTierGUIApp: App {
                 }
         }
         .windowStyle(.hiddenTitleBar)
+        .defaultSize(width: 800, height: 600)
         .commands {
             CommandGroup(after: .appInfo) {
                 Button("关于 EasyTier") {
@@ -59,6 +107,15 @@ struct EasyTierGUIApp: App {
 
 class AppDelegate: NSObject, NSApplicationDelegate {
     static private(set) var shared: AppDelegate?
+    var processVM: ProcessViewModel?
+    private let mainWindowDelegate = MainWindowDelegate()
+    private weak var mainWindow: NSWindow?
+    private var openMainWindowAction: (() -> Void)?
+
+    func applicationWillTerminate(_ notification: Notification) {
+        // Stop all background processes synchronously on exit
+        processVM?.forceStopAllSync()
+    }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         // Only terminate if the Dock icon is visible, or if the user explicitly quits
@@ -78,22 +135,111 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-        if !flag {
-            showMainWindowWithDock()
-        }
+        showMainWindowWithDock()
         return true
     }
 
     func showMainWindowWithDock() {
-        setDockIconVisible(true)
-        DispatchQueue.main.async {
-            NSApp.unhide(nil)
-            if let window = NSApplication.shared.windows.first {
+        // Make sure we're on main thread
+        guard Thread.isMainThread else {
+            DispatchQueue.main.async {
+                self.showMainWindowWithDock()
+            }
+            return
+        }
+
+        // Switching from accessory to regular is not instantaneous on macOS.
+        // Restoring the window too early can leave the app activated in the Dock
+        // while the SwiftUI window stays hidden until the Dock icon is clicked.
+        NSApp.setActivationPolicy(.regular)
+        NSApp.unhide(nil)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
+            self.restoreMainWindow()
+        }
+    }
+
+    func setOpenMainWindowAction(_ action: @escaping () -> Void) {
+        openMainWindowAction = action
+    }
+
+    private func openMainWindowScene() {
+        if let openMainWindowAction {
+            openMainWindowAction()
+        }
+    }
+
+    private func restoreMainWindow() {
+        guard Thread.isMainThread else {
+            DispatchQueue.main.async {
+                self.restoreMainWindow()
+            }
+            return
+        }
+
+        NSRunningApplication.current.activate(options: [.activateAllWindows, .activateIgnoringOtherApps])
+        NSApp.activate(ignoringOtherApps: true)
+
+        if let window = resolvedMainWindow() {
+            if window.isMiniaturized {
+                window.deminiaturize(nil)
+            }
+
+            window.setIsVisible(true)
+            window.makeKeyAndOrderFront(nil)
+            window.orderFrontRegardless()
+            mainWindow = window
+            NSRunningApplication.current.activate(options: [.activateAllWindows, .activateIgnoringOtherApps])
+            NSApp.activate(ignoringOtherApps: true)
+            return
+        }
+
+        openMainWindowScene()
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
+            if let window = self.resolvedMainWindow() {
+                if window.isMiniaturized {
+                    window.deminiaturize(nil)
+                }
+
+                window.setIsVisible(true)
                 window.makeKeyAndOrderFront(nil)
                 window.orderFrontRegardless()
-                NSApp.activate(ignoringOtherApps: true)
+                self.mainWindow = window
             }
+
+            NSRunningApplication.current.activate(options: [.activateAllWindows, .activateIgnoringOtherApps])
+            NSApp.activate(ignoringOtherApps: true)
         }
+    }
+
+    func configureMainWindow(_ window: NSWindow) {
+        guard mainWindow !== window else { return }
+        mainWindow = window
+        mainWindowDelegate.appDelegate = self
+        window.delegate = mainWindowDelegate
+        window.isReleasedWhenClosed = false
+    }
+
+    fileprivate func handleMainWindowClose(_ window: NSWindow) -> Bool {
+        let showDock = UserDefaults.standard.bool(forKey: "showDockIcon")
+        guard !showDock else { return true }
+
+        window.orderOut(nil)
+        setDockIconVisible(false)
+        return false
+    }
+
+    private func resolvedMainWindow() -> NSWindow? {
+        if let mainWindow, !mainWindow.isSheet {
+            return mainWindow
+        }
+
+        if let window = NSApplication.shared.windows.first(where: { !$0.isSheet && $0.contentView != nil }) {
+            mainWindow = window
+            return window
+        }
+
+        return nil
     }
 
     func setDockIconVisible(_ visible: Bool) {
@@ -110,27 +256,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Check if running as root (uid 0)
         let uid = getuid()
         if uid != 0 {
-            // Not running as root, show authorization dialog
+            // Not running as root, directly request authorization (will show password dialog)
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                self.requestRootPrivileges()
+                self.authorizeCurrentSession()
             }
-        }
-    }
-
-    private func requestRootPrivileges() {
-        let alert = NSAlert()
-        alert.messageText = "需要管理员权限"
-        alert.informativeText = "EasyTier 需要 root 权限才能创建 TUN 网络设备。\n\n点击\"授权\"后会请求一次管理员密码，并在当前应用内建立管理员会话。之后连接和断开都不再重复弹出密码框，也不会重启应用。"
-        alert.alertStyle = .warning
-        alert.addButton(withTitle: "授权")
-        alert.addButton(withTitle: "取消")
-
-        let response = alert.runModal()
-        if response == .alertFirstButtonReturn {
-            authorizeCurrentSession()
-        } else {
-            // User cancelled, show info about limited functionality
-            showLimitedFunctionalityWarning()
         }
     }
 
@@ -165,20 +294,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    private func showLimitedFunctionalityWarning() {
-        DispatchQueue.main.async {
-            let alert = NSAlert()
-            alert.messageText = "功能受限"
-            alert.informativeText = """
-            未获取管理员权限，EasyTier 将无法创建 TUN 设备。
+}
 
-            如需完整功能，请重新启动应用并完成授权，
-            或使用以下命令重新运行：
-            sudo /Applications/EasyTierGUI.app/Contents/MacOS/EasyTierGUI
-            """
-            alert.alertStyle = .warning
-            alert.addButton(withTitle: "知道了")
-            alert.runModal()
-        }
+private final class MainWindowDelegate: NSObject, NSWindowDelegate {
+    weak var appDelegate: AppDelegate?
+
+    func windowShouldClose(_ sender: NSWindow) -> Bool {
+        appDelegate?.handleMainWindowClose(sender) ?? true
     }
 }

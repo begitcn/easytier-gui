@@ -134,6 +134,15 @@ class ProcessViewModel: ObservableObject {
             .store(in: &cancellables)
     }
 
+    // MARK: - Core Detection
+
+    /// 检测 easytier-core 是否存在
+    var easytierCoreExists: Bool {
+        let easytierPath = UserDefaults.standard.string(forKey: "easytierPath") ?? "/usr/local/bin"
+        let corePath = URL(fileURLWithPath: easytierPath).appendingPathComponent("easytier-core").path
+        return FileManager.default.isExecutableFile(atPath: corePath)
+    }
+
     var activeConfig: EasyTierConfig? {
         configManager.activeConfig
     }
@@ -184,6 +193,14 @@ class ProcessViewModel: ObservableObject {
     func connect(configID: UUID) async {
         guard let config = configManager.configs.first(where: { $0.id == configID }) else { return }
         let runtime = runtime(for: configID)
+
+        // 检查内核是否存在
+        guard easytierCoreExists else {
+            runtime.errorMessage = "未找到 easytier-core，请在设置中配置正确的 EasyTier 目录。"
+            runtime.status = .error
+            refreshOverallStatus()
+            return
+        }
 
         let conflictingNetwork = configManager.configs.first {
             $0.id != config.id && isRunning($0) && ($0.listenPort == config.listenPort || $0.rpcPortalPort == config.rpcPortalPort)
@@ -272,7 +289,7 @@ class ProcessViewModel: ObservableObject {
     }
     private func refreshOverallStatus() {
         let statuses = runtimes.values.map(\.status)
-        
+
         // Collect detailed status for each network
         let detailedStatuses = configManager.configs.map { config in
             (name: config.name, status: status(for: config))

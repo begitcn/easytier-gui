@@ -21,7 +21,12 @@
       "Read(//Applications/**)",
       "Read(//var/spool/**)",
       "Read(//Library/LaunchDaemons/**)",
-      "Bash(crontab:*)"
+      "Bash(crontab:*)",
+      "Bash(./build.sh)",
+      "WebFetch(domain:api.github.com)",
+      "Bash(curl -s -H \"User-Agent: EasyTierGUI/1.0\" \"https://api.github.com/repos/EasyTier/EasyTier/releases/latest\")",
+      "Bash(python3 -c \"import sys,json; data=json.load(sys.stdin); [print(a[''''name'''']) for a in data[''''assets'''']]\")",
+      "Bash(./build.sh Debug)"
     ],
     "deny": [],
     "ask": []

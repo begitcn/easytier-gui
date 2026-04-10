@@ -1,0 +1,65 @@
+{
+  "buildCommand" : {
+    "command" : "build",
+    "skipDependencies" : false,
+    "style" : "buildOnly"
+  },
+  "configuredTargets" : [
+    {
+      "guid" : "dd241e72f815319c3e7a9a35b587b6174174edf6c8a531f60b69a4954d596527"
+    }
+  ],
+  "containerPath" : "/Users/begitcn/VsCodeProjects/easytier-gui/EasyTierGUI.xcodeproj",
+  "continueBuildingAfterErrors" : false,
+  "dependencyScope" : "workspace",
+  "enableIndexBuildArena" : false,
+  "hideShellScriptEnvironment" : false,
+  "parameters" : {
+    "action" : "build",
+    "activeArchitecture" : "x86_64",
+    "activeRunDestination" : {
+      "disableOnlyActiveArch" : false,
+      "platform" : "macosx",
+      "sdk" : "macosx15.2",
+      "sdkVariant" : "macos",
+      "supportedArchitectures" : [
+        "x86_64h",
+        "x86_64"
+      ],
+      "targetArchitecture" : "x86_64"
+    },
+    "arenaInfo" : {
+      "buildIntermediatesPath" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex",
+      "buildProductsPath" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Products",
+      "derivedDataPath" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData",
+      "indexDataStoreFolderPath" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Index.noindex/DataStore",
+      "indexEnableDataStore" : true,
+      "indexPCHPath" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Index.noindex/PrecompiledHeaders",
+      "pchPath" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/PrecompiledHeaders"
+    },
+    "configurationName" : "Release",
+    "overrides" : {
+      "commandLine" : {
+        "table" : {
+
+        }
+      },
+      "synthesized" : {
+        "table" : {
+          "ACTION" : "build",
+          "COLOR_DIAGNOSTICS" : "YES",
+          "diagnostic_message_length" : "118",
+          "ENABLE_PREVIEWS" : "NO",
+          "ENABLE_XOJIT_PREVIEWS" : "YES",
+          "ONLY_ACTIVE_ARCH" : "YES"
+        }
+      }
+    }
+  },
+  "schemeCommand" : "launch",
+  "showNonLoggedProgress" : true,
+  "useDryRun" : false,
+  "useImplicitDependencies" : true,
+  "useLegacyBuildLocations" : false,
+  "useParallelTargets" : true
+}

@@ -1,0 +1,88 @@
+{
+  "source": "/Users/begitcn/VsCodeProjects/easytier-gui/EasyTierGUI/Views/LogView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "运行日志",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 37
+        }
+      },
+      {
+        "comment": "",
+        "key": "当前过滤条件下没有记录或网络未运行",
+        "location": {
+          "startingColumn": 43,
+          "startingLine": 104
+        }
+      },
+      {
+        "comment": "",
+        "key": "暂无日志",
+        "location": {
+          "startingColumn": 25,
+          "startingLine": 102
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 49
+        }
+      },
+      {
+        "comment": "",
+        "key": "自动滚动",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 72
+        }
+      },
+      {
+        "comment": "",
+        "key": "过滤日志消息...",
+        "location": {
+          "startingColumn": 35,
+          "startingLine": 60
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld 条记录",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 131
+        }
+      },
+      {
+        "comment": "",
+        "key": "未选择网络",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 142
+        }
+      },
+      {
+        "comment": "",
+        "key": "已停止",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 160
+        }
+      },
+      {
+        "comment": "",
+        "key": "实时监控",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 155
+        }
+      }
+    ]
+  },
+  "version": 1
+}

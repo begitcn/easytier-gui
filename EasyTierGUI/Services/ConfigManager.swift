@@ -123,6 +123,18 @@ class ConfigManager: ObservableObject {
         return try decoder.decode(EasyTierConfig.self, from: data)
     }
 
+    /// Export all configurations to a single JSON file
+    func exportAllConfigs(to url: URL) throws {
+        let data = try encoder.encode(configs)
+        try data.write(to: url)
+    }
+
+    /// Import multiple configurations from a JSON file
+    func importConfigs(from url: URL) throws -> [EasyTierConfig] {
+        let data = try Data(contentsOf: url)
+        return try decoder.decode([EasyTierConfig].self, from: data)
+    }
+
     // MARK: - Generate Config JSON for easytier CLI
 
     func generateCLIBuildArguments(config: EasyTierConfig) -> [String] {

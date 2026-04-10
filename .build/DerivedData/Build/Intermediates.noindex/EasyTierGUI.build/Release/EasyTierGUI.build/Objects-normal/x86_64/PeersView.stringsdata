@@ -1,0 +1,168 @@
+{
+  "source": "/Users/begitcn/VsCodeProjects/easytier-gui/EasyTierGUI/Views/PeersView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "节点详情",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 65
+        }
+      },
+      {
+        "comment": "",
+        "key": "请先在当前页面左上方选择一个虚拟网络",
+        "location": {
+          "startingColumn": 43,
+          "startingLine": 124
+        }
+      },
+      {
+        "comment": "",
+        "key": "启动 EasyTier 以查看已连接的节点",
+        "location": {
+          "startingColumn": 43,
+          "startingLine": 131
+        }
+      },
+      {
+        "comment": "",
+        "key": "请尝试调整搜索条件",
+        "location": {
+          "startingColumn": 43,
+          "startingLine": 138
+        }
+      },
+      {
+        "comment": "",
+        "key": "未选择虚拟网络",
+        "location": {
+          "startingColumn": 25,
+          "startingLine": 122
+        }
+      },
+      {
+        "comment": "",
+        "key": "未连接网络",
+        "location": {
+          "startingColumn": 25,
+          "startingLine": 129
+        }
+      },
+      {
+        "comment": "",
+        "key": "未找到节点",
+        "location": {
+          "startingColumn": 25,
+          "startingLine": 136
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 77
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 97
+        }
+      },
+      {
+        "comment": "",
+        "key": "搜索节点内容...",
+        "location": {
+          "startingColumn": 35,
+          "startingLine": 88
+        }
+      },
+      {
+        "comment": "",
+        "key": "排列: %@",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 99
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld 在线 / %lld 总计",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 112
+        }
+      },
+      {
+        "comment": "",
+        "key": "状态",
+        "location": {
+          "startingColumn": 37,
+          "startingLine": 143
+        }
+      },
+      {
+        "comment": "",
+        "key": "主机名",
+        "location": {
+          "startingColumn": 37,
+          "startingLine": 164
+        }
+      },
+      {
+        "comment": "",
+        "key": "IPv4",
+        "location": {
+          "startingColumn": 37,
+          "startingLine": 170
+        }
+      },
+      {
+        "comment": "",
+        "key": "延迟",
+        "location": {
+          "startingColumn": 37,
+          "startingLine": 184
+        }
+      },
+      {
+        "comment": "",
+        "key": "连接方式",
+        "location": {
+          "startingColumn": 37,
+          "startingLine": 196
+        }
+      },
+      {
+        "comment": "",
+        "key": "复制 IPv4",
+        "location": {
+          "startingColumn": 44,
+          "startingLine": 178
+        }
+      },
+      {
+        "comment": "",
+        "key": "-",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 190
+        }
+      },
+      {
+        "comment": "",
+        "key": "%@ ms",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 186
+        }
+      }
+    ]
+  },
+  "version": 1
+}

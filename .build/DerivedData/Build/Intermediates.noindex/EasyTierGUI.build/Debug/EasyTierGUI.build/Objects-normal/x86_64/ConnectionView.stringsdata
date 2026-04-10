@@ -1,0 +1,376 @@
+{
+  "source": "/Users/begitcn/VsCodeProjects/easytier-gui/EasyTierGUI/Views/ConnectionView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "暂无可用配置",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 28
+        }
+      },
+      {
+        "comment": "",
+        "key": "配置设置",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 58
+        }
+      },
+      {
+        "comment": "",
+        "key": "* 为必填项",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 63
+        }
+      },
+      {
+        "comment": "",
+        "key": "基础设置",
+        "location": {
+          "startingColumn": 42,
+          "startingLine": 72
+        }
+      },
+      {
+        "comment": "",
+        "key": "TUN 设备",
+        "location": {
+          "startingColumn": 42,
+          "startingLine": 79
+        }
+      },
+      {
+        "comment": "",
+        "key": "使用 DHCP",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 80
+        }
+      },
+      {
+        "comment": "",
+        "key": "IPv4 地址/掩码 (例如: 192.168.55.13/24)",
+        "location": {
+          "startingColumn": 39,
+          "startingLine": 83
+        }
+      },
+      {
+        "comment": "",
+        "key": "子网掩码",
+        "location": {
+          "startingColumn": 35,
+          "startingLine": 87
+        }
+      },
+      {
+        "comment": "",
+        "key": "MTU: %lld",
+        "location": {
+          "startingColumn": 33,
+          "startingLine": 89
+        }
+      },
+      {
+        "comment": "",
+        "key": "高级设置",
+        "location": {
+          "startingColumn": 42,
+          "startingLine": 98
+        }
+      },
+      {
+        "comment": "",
+        "key": "其他选项",
+        "location": {
+          "startingColumn": 42,
+          "startingLine": 113
+        }
+      },
+      {
+        "comment": "",
+        "key": "主机名",
+        "location": {
+          "startingColumn": 35,
+          "startingLine": 99
+        }
+      },
+      {
+        "comment": "",
+        "key": "开启延迟优先模式",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 106
+        }
+      },
+      {
+        "comment": "",
+        "key": "启用私有模式",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 107
+        }
+      },
+      {
+        "comment": "",
+        "key": "接受 DNS 配置",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 108
+        }
+      },
+      {
+        "comment": "",
+        "key": "启用多线程",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 109
+        }
+      },
+      {
+        "comment": "",
+        "key": "启用KCP代理",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 110
+        }
+      },
+      {
+        "comment": "",
+        "key": "监听端口: %lld",
+        "location": {
+          "startingColumn": 33,
+          "startingLine": 114
+        }
+      },
+      {
+        "comment": "",
+        "key": "管理端口: %lld",
+        "location": {
+          "startingColumn": 33,
+          "startingLine": 115
+        }
+      },
+      {
+        "comment": "",
+        "key": "日志级别",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 116
+        }
+      },
+      {
+        "comment": "",
+        "key": "调试",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 117
+        }
+      },
+      {
+        "comment": "",
+        "key": "信息",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 118
+        }
+      },
+      {
+        "comment": "",
+        "key": "警告",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 119
+        }
+      },
+      {
+        "comment": "",
+        "key": "错误",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 120
+        }
+      },
+      {
+        "comment": "",
+        "key": "*",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 154
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 158
+        }
+      },
+      {
+        "comment": "",
+        "key": "*",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 169
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 25,
+          "startingLine": 173
+        }
+      },
+      {
+        "comment": "",
+        "key": "必填项未完成",
+        "location": {
+          "startingColumn": 16,
+          "startingLine": 359
+        }
+      },
+      {
+        "comment": "",
+        "key": "导出成功",
+        "location": {
+          "startingColumn": 16,
+          "startingLine": 364
+        }
+      },
+      {
+        "comment": "",
+        "key": "导入失败",
+        "location": {
+          "startingColumn": 16,
+          "startingLine": 369
+        }
+      },
+      {
+        "comment": "",
+        "key": "导出成功",
+        "location": {
+          "startingColumn": 16,
+          "startingLine": 374
+        }
+      },
+      {
+        "comment": "",
+        "key": "虚拟网络",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 195
+        }
+      },
+      {
+        "comment": "",
+        "key": "导入",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 207
+        }
+      },
+      {
+        "comment": "",
+        "key": "导出全部",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 221
+        }
+      },
+      {
+        "comment": "",
+        "key": "导出此配置",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 280
+        }
+      },
+      {
+        "comment": "",
+        "key": "断开",
+        "location": {
+          "startingColumn": 44,
+          "startingLine": 282
+        }
+      },
+      {
+        "comment": "",
+        "key": "连接",
+        "location": {
+          "startingColumn": 55,
+          "startingLine": 282
+        }
+      },
+      {
+        "comment": "",
+        "key": "运行中",
+        "location": {
+          "startingColumn": 42,
+          "startingLine": 254
+        }
+      },
+      {
+        "comment": "",
+        "key": "添加虚拟网络",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 340
+        }
+      },
+      {
+        "comment": "",
+        "key": "好的",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 360
+        }
+      },
+      {
+        "comment": "",
+        "key": "好的",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 365
+        }
+      },
+      {
+        "comment": "",
+        "key": "配置已成功导出",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 367
+        }
+      },
+      {
+        "comment": "",
+        "key": "好的",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 370
+        }
+      },
+      {
+        "comment": "",
+        "key": "好的",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 375
+        }
+      },
+      {
+        "comment": "",
+        "key": "所有配置已成功导出",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 377
+        }
+      }
+    ]
+  },
+  "version": 1
+}

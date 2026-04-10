@@ -7,7 +7,7 @@ import AppKit
 struct PeersView: View {
     @EnvironmentObject var vm: ProcessViewModel
     @State private var searchText = ""
-    @State private var sortKey: SortKey = .hostname
+    @State private var sortKey: SortKey = .ipv4
 
     private var selectedConfigIndex: Binding<Int> {
         Binding(
@@ -48,7 +48,7 @@ struct PeersView: View {
         result.sort { a, b in
             switch sortKey {
             case .hostname: return a.hostname < b.hostname
-            case .ipv4: return a.ipv4 < b.ipv4
+            case .ipv4: return a.ipv4.localizedStandardCompare(b.ipv4) == .orderedAscending
             case .latency: return (a.latencyMs ?? Double.greatestFiniteMagnitude) < (b.latencyMs ?? Double.greatestFiniteMagnitude)
             case .cost: return (a.cost ?? "") < (b.cost ?? "")
             case .status:

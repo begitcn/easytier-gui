@@ -1,146 +1,105 @@
 #!/bin/bash
 
-# Icon Generation Script for EasyTier GUI
-# Requires ImageMagick or sips (macOS built-in)
-
-set -e
-
-echo "🎨 Generating EasyTier GUI Icons..."
-echo "=================================="
+set -euo pipefail
 
 ICONSET_DIR="./EasyTierGUI/Assets.xcassets/AppIcon.appiconset"
-SVG_FILE="./icon.svg"
+SOURCE_PNG="${1:-./logo.png}"
 
-# Check if SVG exists
-if [ ! -f "$SVG_FILE" ]; then
-    echo "❌ SVG file not found: $SVG_FILE"
+echo "Generating macOS app icons from: $SOURCE_PNG"
+
+if ! command -v sips >/dev/null 2>&1; then
+    echo "sips is required but was not found."
     exit 1
 fi
 
-# Create temp directory
-TEMP_DIR=$(mktemp -d)
-echo "📁 Temp directory: $TEMP_DIR"
-
-# Try using sips (macOS built-in)
-if command -v sips &> /dev/null; then
-    echo "✅ Using sips (macOS built-in)"
-
-    # First convert SVG to PNG using qlmanage or rsvg-convert
-    if command -v rsvg-convert &> /dev/null; then
-        echo "✅ Using rsvg-convert for SVG"
-        rsvg-convert -w 1024 -h 1024 "$SVG_FILE" > "$TEMP_DIR/icon_1024.png"
-    elif command -v qlmanage &> /dev/null; then
-        echo "✅ Using qlmanage for SVG"
-        qlmanage -t -s 1024 -o "$TEMP_DIR" "$SVG_FILE"
-        mv "$TEMP_DIR"/*.png "$TEMP_DIR/icon_1024.png" 2>/dev/null || true
-    else
-        echo "⚠️  No SVG converter found. Please install librsvg:"
-        echo "   brew install librsvg"
-        echo ""
-        echo "Alternatively, manually create a 1024x1024 PNG and run this script."
-        exit 1
-    fi
-
-    BASE_PNG="$TEMP_DIR/icon_1024.png"
-
-    if [ ! -f "$BASE_PNG" ]; then
-        echo "❌ Failed to create base PNG"
-        exit 1
-    fi
-
-    # Generate all required sizes
-    sizes=("16:16" "32:16@2x" "32:32" "64:32@2x" "128:128" "256:128@2x" "256:256" "512:256@2x" "512:512" "1024:512@2x")
-
-    for size_def in "${sizes[@]}"; do
-        IFS=':' read -r size filename <<< "$size_def"
-        echo "  Creating ${size}x${size} -> icon_${filename}.png"
-        sips -z $size $size "$BASE_PNG" --out "$ICONSET_DIR/icon_${filename}.png" > /dev/null 2>&1
-    done
-
-# Try ImageMagick
-elif command -v convert &> /dev/null; then
-    echo "✅ Using ImageMagick"
-
-    sizes=("16:16" "32:16@2x" "32:32" "64:32@2x" "128:128" "256:128@2x" "256:256" "512:256@2x" "512:512" "1024:512@2x")
-
-    for size_def in "${sizes[@]}"; do
-        IFS=':' read -r size filename <<< "$size_def"
-        echo "  Creating ${size}x${size} -> icon_${filename}.png"
-        convert -background none -resize ${size}x${size} "$SVG_FILE" "$ICONSET_DIR/icon_${filename}.png"
-    done
-else
-    echo "❌ No suitable image converter found"
-    echo "Please install one of:"
-    echo "  - ImageMagick: brew install imagemagick"
-    echo "  - librsvg: brew install librsvg"
+if [ ! -f "$SOURCE_PNG" ]; then
+    echo "Source image not found: $SOURCE_PNG"
     exit 1
 fi
 
-# Update Contents.json
-echo ""
-echo "📝 Updating Contents.json"
-cat > "$ICONSET_DIR/Contents.json" << 'EOF'
+mkdir -p "$ICONSET_DIR"
+
+SOURCE_WIDTH=$(sips -g pixelWidth "$SOURCE_PNG" | awk '/pixelWidth/ {print $2}')
+SOURCE_HEIGHT=$(sips -g pixelHeight "$SOURCE_PNG" | awk '/pixelHeight/ {print $2}')
+
+if [ "$SOURCE_WIDTH" != "$SOURCE_HEIGHT" ]; then
+    echo "Source image must be square. Current size: ${SOURCE_WIDTH}x${SOURCE_HEIGHT}"
+    exit 1
+fi
+
+if [ "$SOURCE_WIDTH" -lt 1024 ]; then
+    echo "Source image should be at least 1024x1024. Current size: ${SOURCE_WIDTH}x${SOURCE_HEIGHT}"
+    exit 1
+fi
+
+for size in 16 32 64 128 256 512 1024; do
+    output_file="$ICONSET_DIR/${size}.png"
+    echo "Creating ${size}x${size} -> ${output_file}"
+    sips -z "$size" "$size" "$SOURCE_PNG" --out "$output_file" >/dev/null
+done
+
+cat > "$ICONSET_DIR/Contents.json" <<'EOF'
 {
   "images" : [
     {
-      "filename" : "icon_16.png",
+      "size" : "16x16",
       "idiom" : "mac",
-      "scale" : "1x",
-      "size" : "16x16"
+      "filename" : "16.png",
+      "scale" : "1x"
     },
     {
-      "filename" : "icon_16@2x.png",
+      "size" : "16x16",
       "idiom" : "mac",
-      "scale" : "2x",
-      "size" : "16x16"
+      "filename" : "32.png",
+      "scale" : "2x"
     },
     {
-      "filename" : "icon_32.png",
+      "size" : "32x32",
       "idiom" : "mac",
-      "scale" : "1x",
-      "size" : "32x32"
+      "filename" : "32.png",
+      "scale" : "1x"
     },
     {
-      "filename" : "icon_32@2x.png",
+      "size" : "32x32",
       "idiom" : "mac",
-      "scale" : "2x",
-      "size" : "32x32"
+      "filename" : "64.png",
+      "scale" : "2x"
     },
     {
-      "filename" : "icon_128.png",
+      "size" : "128x128",
       "idiom" : "mac",
-      "scale" : "1x",
-      "size" : "128x128"
+      "filename" : "128.png",
+      "scale" : "1x"
     },
     {
-      "filename" : "icon_128@2x.png",
+      "size" : "128x128",
       "idiom" : "mac",
-      "scale" : "2x",
-      "size" : "128x128"
+      "filename" : "256.png",
+      "scale" : "2x"
     },
     {
-      "filename" : "icon_256.png",
+      "size" : "256x256",
       "idiom" : "mac",
-      "scale" : "1x",
-      "size" : "256x256"
+      "filename" : "256.png",
+      "scale" : "1x"
     },
     {
-      "filename" : "icon_256@2x.png",
+      "size" : "256x256",
       "idiom" : "mac",
-      "scale" : "2x",
-      "size" : "256x256"
+      "filename" : "512.png",
+      "scale" : "2x"
     },
     {
-      "filename" : "icon_512.png",
+      "size" : "512x512",
       "idiom" : "mac",
-      "scale" : "1x",
-      "size" : "512x512"
+      "filename" : "512.png",
+      "scale" : "1x"
     },
     {
-      "filename" : "icon_512@2x.png",
+      "size" : "512x512",
       "idiom" : "mac",
-      "scale" : "2x",
-      "size" : "512x512"
+      "filename" : "1024.png",
+      "scale" : "2x"
     }
   ],
   "info" : {
@@ -150,11 +109,5 @@ cat > "$ICONSET_DIR/Contents.json" << 'EOF'
 }
 EOF
 
-# Cleanup
-rm -rf "$TEMP_DIR"
-
-echo ""
-echo "✨ Icon generation complete!"
-echo ""
-echo "Generated files:"
-ls -lh "$ICONSET_DIR"
+echo "App icons generated in $ICONSET_DIR"
+echo "Menu bar icon was not modified."
