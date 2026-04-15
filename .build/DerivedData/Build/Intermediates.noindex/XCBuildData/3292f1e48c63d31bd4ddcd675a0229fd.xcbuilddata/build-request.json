@@ -37,7 +37,7 @@
       "indexPCHPath" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Index.noindex/PrecompiledHeaders",
       "pchPath" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/PrecompiledHeaders"
     },
-    "configurationName" : "Release",
+    "configurationName" : "Debug",
     "overrides" : {
       "commandLine" : {
         "table" : {

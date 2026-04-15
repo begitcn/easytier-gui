@@ -38,6 +38,13 @@ final class NetworkRuntime: ObservableObject, Identifiable {
             .store(in: &cancellables)
     }
 
+    deinit {
+        // Clean up timer to prevent memory leaks
+        peerTimer?.invalidate()
+        peerTimer = nil
+        cancellables.removeAll()
+    }
+
     func connect(config: EasyTierConfig) async {
         status = .connecting
         errorMessage = nil

@@ -13,6 +13,9 @@ class MenuBarManager: ObservableObject {
     @Published var connectionStatus: NetworkStatus = .disconnected
     private var networkStatuses: [(name: String, status: NetworkStatus)] = []
 
+    // Cache tinted images to avoid recreating them
+    private var cachedImages: [NetworkStatus: NSImage] = [:]
+
     func setupMenuBar() {
         if !UserDefaults.standard.bool(forKey: "showMenuBar") && UserDefaults.standard.object(forKey: "showMenuBar") != nil {
             return
@@ -30,7 +33,7 @@ class MenuBarManager: ObservableObject {
         }
 
         // We don't attach the menu directly to statusItem anymore so we can control the click
-        // statusItem?.menu = buildMenu() 
+        // statusItem?.menu = buildMenu()
     }
 
     @objc private func handleTrayClick(_ sender: Any?) {
@@ -60,6 +63,13 @@ class MenuBarManager: ObservableObject {
         guard let button = statusItem?.button else { return }
         connectionStatus = status
 
+        // Use cached image if available
+        if let cached = cachedImages[status] {
+            button.image = cached
+            button.toolTip = "EasyTier - \(status.description)"
+            return
+        }
+
         let symbolName: String
         switch status {
         case .disconnected: symbolName = "network.slash"
@@ -69,16 +79,16 @@ class MenuBarManager: ObservableObject {
         }
 
         if let image = NSImage(systemSymbolName: symbolName, accessibilityDescription: "EasyTier Status") {
+            let finalImage: NSImage
             switch status {
             case .connected:
-                // Render in green — not template so the tint color shows
                 image.isTemplate = false
                 guard let tinted = image.copy() as? NSImage else { return }
                 tinted.lockFocus()
                 NSColor.systemGreen.withAlphaComponent(0.9).set()
                 NSRect(origin: .zero, size: tinted.size).fill(using: .sourceAtop)
                 tinted.unlockFocus()
-                button.image = tinted
+                finalImage = tinted
             case .connecting:
                 image.isTemplate = false
                 guard let tinted = image.copy() as? NSImage else { return }
@@ -86,11 +96,13 @@ class MenuBarManager: ObservableObject {
                 NSColor.systemOrange.withAlphaComponent(0.9).set()
                 NSRect(origin: .zero, size: tinted.size).fill(using: .sourceAtop)
                 tinted.unlockFocus()
-                button.image = tinted
+                finalImage = tinted
             default:
                 image.isTemplate = true
-                button.image = image
+                finalImage = image
             }
+            cachedImages[status] = finalImage
+            button.image = finalImage
             button.toolTip = "EasyTier - \(status.description)"
         }
     }

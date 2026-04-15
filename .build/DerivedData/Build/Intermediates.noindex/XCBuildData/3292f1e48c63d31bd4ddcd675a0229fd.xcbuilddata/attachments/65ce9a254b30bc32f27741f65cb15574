@@ -1,0 +1,128 @@
+{
+  "" : {
+    "diagnostics" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/EasyTierGUI-master.dia",
+    "emit-module-dependencies" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/EasyTierGUI-master-emit-module.d",
+    "emit-module-diagnostics" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/EasyTierGUI-master-emit-module.dia",
+    "swift-dependencies" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/EasyTierGUI-master.swiftdeps"
+  },
+  "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/DerivedSources/GeneratedAssetSymbols.swift" : {
+    "const-values" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/GeneratedAssetSymbols.swiftconstvalues",
+    "dependencies" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/GeneratedAssetSymbols.d",
+    "diagnostics" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/GeneratedAssetSymbols.dia",
+    "index-unit-output-path" : "/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/GeneratedAssetSymbols.o",
+    "llvm-bc" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/GeneratedAssetSymbols.bc",
+    "object" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/GeneratedAssetSymbols.o",
+    "swift-dependencies" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/GeneratedAssetSymbols.swiftdeps",
+    "swiftmodule" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/GeneratedAssetSymbols~partial.swiftmodule"
+  },
+  "/Users/begitcn/VsCodeProjects/easytier-gui/EasyTierGUI/EasyTierGUIApp.swift" : {
+    "const-values" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/EasyTierGUIApp.swiftconstvalues",
+    "dependencies" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/EasyTierGUIApp.d",
+    "diagnostics" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/EasyTierGUIApp.dia",
+    "index-unit-output-path" : "/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/EasyTierGUIApp.o",
+    "llvm-bc" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/EasyTierGUIApp.bc",
+    "object" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/EasyTierGUIApp.o",
+    "swift-dependencies" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/EasyTierGUIApp.swiftdeps",
+    "swiftmodule" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/EasyTierGUIApp~partial.swiftmodule"
+  },
+  "/Users/begitcn/VsCodeProjects/easytier-gui/EasyTierGUI/Models/Models.swift" : {
+    "const-values" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/Models.swiftconstvalues",
+    "dependencies" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/Models.d",
+    "diagnostics" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/Models.dia",
+    "index-unit-output-path" : "/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/Models.o",
+    "llvm-bc" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/Models.bc",
+    "object" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/Models.o",
+    "swift-dependencies" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/Models.swiftdeps",
+    "swiftmodule" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/Models~partial.swiftmodule"
+  },
+  "/Users/begitcn/VsCodeProjects/easytier-gui/EasyTierGUI/Services/ConfigManager.swift" : {
+    "const-values" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/ConfigManager.swiftconstvalues",
+    "dependencies" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/ConfigManager.d",
+    "diagnostics" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/ConfigManager.dia",
+    "index-unit-output-path" : "/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/ConfigManager.o",
+    "llvm-bc" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/ConfigManager.bc",
+    "object" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/ConfigManager.o",
+    "swift-dependencies" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/ConfigManager.swiftdeps",
+    "swiftmodule" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/ConfigManager~partial.swiftmodule"
+  },
+  "/Users/begitcn/VsCodeProjects/easytier-gui/EasyTierGUI/Services/EasyTierService.swift" : {
+    "const-values" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/EasyTierService.swiftconstvalues",
+    "dependencies" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/EasyTierService.d",
+    "diagnostics" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/EasyTierService.dia",
+    "index-unit-output-path" : "/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/EasyTierService.o",
+    "llvm-bc" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/EasyTierService.bc",
+    "object" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/EasyTierService.o",
+    "swift-dependencies" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/EasyTierService.swiftdeps",
+    "swiftmodule" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/EasyTierService~partial.swiftmodule"
+  },
+  "/Users/begitcn/VsCodeProjects/easytier-gui/EasyTierGUI/Services/MenuBarManager.swift" : {
+    "const-values" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/MenuBarManager.swiftconstvalues",
+    "dependencies" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/MenuBarManager.d",
+    "diagnostics" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/MenuBarManager.dia",
+    "index-unit-output-path" : "/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/MenuBarManager.o",
+    "llvm-bc" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/MenuBarManager.bc",
+    "object" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/MenuBarManager.o",
+    "swift-dependencies" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/MenuBarManager.swiftdeps",
+    "swiftmodule" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/MenuBarManager~partial.swiftmodule"
+  },
+  "/Users/begitcn/VsCodeProjects/easytier-gui/EasyTierGUI/Services/ProcessViewModel.swift" : {
+    "const-values" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/ProcessViewModel.swiftconstvalues",
+    "dependencies" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/ProcessViewModel.d",
+    "diagnostics" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/ProcessViewModel.dia",
+    "index-unit-output-path" : "/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/ProcessViewModel.o",
+    "llvm-bc" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/ProcessViewModel.bc",
+    "object" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/ProcessViewModel.o",
+    "swift-dependencies" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/ProcessViewModel.swiftdeps",
+    "swiftmodule" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/ProcessViewModel~partial.swiftmodule"
+  },
+  "/Users/begitcn/VsCodeProjects/easytier-gui/EasyTierGUI/Views/ConnectionView.swift" : {
+    "const-values" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/ConnectionView.swiftconstvalues",
+    "dependencies" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/ConnectionView.d",
+    "diagnostics" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/ConnectionView.dia",
+    "index-unit-output-path" : "/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/ConnectionView.o",
+    "llvm-bc" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/ConnectionView.bc",
+    "object" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/ConnectionView.o",
+    "swift-dependencies" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/ConnectionView.swiftdeps",
+    "swiftmodule" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/ConnectionView~partial.swiftmodule"
+  },
+  "/Users/begitcn/VsCodeProjects/easytier-gui/EasyTierGUI/Views/ContentView.swift" : {
+    "const-values" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/ContentView.swiftconstvalues",
+    "dependencies" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/ContentView.d",
+    "diagnostics" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/ContentView.dia",
+    "index-unit-output-path" : "/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/ContentView.o",
+    "llvm-bc" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/ContentView.bc",
+    "object" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/ContentView.o",
+    "swift-dependencies" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/ContentView.swiftdeps",
+    "swiftmodule" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/ContentView~partial.swiftmodule"
+  },
+  "/Users/begitcn/VsCodeProjects/easytier-gui/EasyTierGUI/Views/LogView.swift" : {
+    "const-values" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/LogView.swiftconstvalues",
+    "dependencies" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/LogView.d",
+    "diagnostics" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/LogView.dia",
+    "index-unit-output-path" : "/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/LogView.o",
+    "llvm-bc" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/LogView.bc",
+    "object" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/LogView.o",
+    "swift-dependencies" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/LogView.swiftdeps",
+    "swiftmodule" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/LogView~partial.swiftmodule"
+  },
+  "/Users/begitcn/VsCodeProjects/easytier-gui/EasyTierGUI/Views/PeersView.swift" : {
+    "const-values" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/PeersView.swiftconstvalues",
+    "dependencies" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/PeersView.d",
+    "diagnostics" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/PeersView.dia",
+    "index-unit-output-path" : "/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/PeersView.o",
+    "llvm-bc" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/PeersView.bc",
+    "object" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/PeersView.o",
+    "swift-dependencies" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/PeersView.swiftdeps",
+    "swiftmodule" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/PeersView~partial.swiftmodule"
+  },
+  "/Users/begitcn/VsCodeProjects/easytier-gui/EasyTierGUI/Views/SettingsView.swift" : {
+    "const-values" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/SettingsView.swiftconstvalues",
+    "dependencies" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/SettingsView.d",
+    "diagnostics" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/SettingsView.dia",
+    "index-unit-output-path" : "/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/SettingsView.o",
+    "llvm-bc" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/SettingsView.bc",
+    "object" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/SettingsView.o",
+    "swift-dependencies" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/SettingsView.swiftdeps",
+    "swiftmodule" : "/Users/begitcn/VsCodeProjects/easytier-gui/.build/DerivedData/Build/Intermediates.noindex/EasyTierGUI.build/Debug/EasyTierGUI.build/Objects-normal/x86_64/SettingsView~partial.swiftmodule"
+  }
+}

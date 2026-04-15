@@ -41,6 +41,10 @@ class EasyTierService: ObservableObject {
     @Published var processOutput = ""
     @Published var logEntries: [LogEntry] = []
 
+    // Memory management constants
+    private let maxOutputLength = 50_000  // ~50KB max for process output (reduced)
+    private let maxLogEntries = 100  // Keep only last 100 log entries
+
     private var process: Process?
     private var outputPipe: Pipe?
     private var outputObserver: AnyCancellable?
@@ -210,6 +214,10 @@ class EasyTierService: ObservableObject {
     }
 
     func stop() async throws {
+        // Clean up output pipe handler first
+        outputPipe?.fileHandleForReading.readabilityHandler = nil
+        outputPipe = nil
+
         if getuid() != 0, process == nil {
             try stopPrivileged()
             privilegedPID = nil
@@ -219,6 +227,7 @@ class EasyTierService: ObservableObject {
         }
 
         guard let process = process, process.isRunning else {
+            self.process = nil
             publishRunning(false)
             return
         }
@@ -237,14 +246,18 @@ class EasyTierService: ObservableObject {
     }
 
     func forceStop() {
+        // Clean up output pipe handler first
+        outputPipe?.fileHandleForReading.readabilityHandler = nil
+        outputPipe = nil
+
         if let process = process {
             process.terminate()
         }
-        
+
         if privilegedPID != nil || getuid() != 0 {
             try? stopPrivileged()
         }
-        
+
         self.process = nil
         self.privilegedPID = nil
         stopPrivilegedLogPolling()
@@ -278,11 +291,19 @@ class EasyTierService: ObservableObject {
         for line in lines where !line.trimmingCharacters(in: .whitespaces).isEmpty {
             let entry = parseLogLine(line)
             logEntries.append(entry)
+        }
 
-            // Keep max 10000 entries
-            if logEntries.count > 10000 {
-                logEntries.removeFirst(logEntries.count - 10000)
-            }
+        // Trim log entries if exceeds max
+        if logEntries.count > maxLogEntries {
+            logEntries.removeFirst(logEntries.count - maxLogEntries)
+        }
+    }
+
+    private func trimProcessOutput() {
+        // Keep processOutput bounded to prevent unbounded memory growth
+        if processOutput.count > maxOutputLength {
+            let dropCount = processOutput.count - maxOutputLength
+            processOutput.removeFirst(dropCount)
         }
     }
 
@@ -507,6 +528,7 @@ class EasyTierService: ObservableObject {
     private func appendOutput(_ output: String) {
         DispatchQueue.main.async {
             self.processOutput.append(output)
+            self.trimProcessOutput()
             self.parseLogEntries(output)
         }
     }
