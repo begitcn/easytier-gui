@@ -15,7 +15,7 @@ EasyTier GUI is a macOS SwiftUI application that provides a graphical interface 
 ## Build Commands
 
 ```bash
-# Build the application (Release configuration)
+# Build the application (Release configuration, arm64 native)
 ./build.sh
 
 # Build with specific configuration
@@ -35,7 +35,21 @@ sudo .build/DerivedData/Build/Products/Release/EasyTierGUI.app/Contents/MacOS/Ea
 ./launch-easytier-gui.sh
 ```
 
+## Package DMG
+
+```bash
+# Create simple DMG installer
+./create-dmg.sh
+
+# Create professional DMG with custom background
+./create-dmg-pro.sh
+
+# Output: EasyTierGUI.dmg
+```
+
 ## Architecture
+
+**Native arm64 build** - The project is configured to build natively for Apple Silicon (arm64). No Rosetta required on M-series Macs.
 
 ### MVVM Pattern
 - **Views/**: SwiftUI views (`ContentView`, `ConnectionView`, `PeersView`, `LogView`, `SettingsView`)

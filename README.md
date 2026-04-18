@@ -56,35 +56,38 @@ sudo /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild -project Easy
 ## 系统要求
 
 - macOS 14.0+
+- Apple Silicon (M1/M2/M3/M4) 原生支持，无需 Rosetta
 - Xcode 15.0+ (用于编译)
 - EasyTier Core 可执行文件
 
-## 安装
+## 编译与打包
 
-### 1. 获取 EasyTier Core
-
-从 [EasyTier Releases](https://github.com/EasyTier/EasyTier/releases) 下载适合您 Mac 的版本：
-
-- Apple Silicon (M1/M2/M3): `easytier-macos-aarch64.zip`
-- Intel Mac: `easytier-macos-x86_64.zip`
-
-解压后将 `easytier-core` 可执行文件放到任意位置。
-
-### 2. 编译应用
+### 从源码编译
 
 ```bash
 git clone https://github.com/your-repo/easytier-gui.git
 cd easytier-gui
-xcodebuild -project EasyTierGUI.xcodeproj -scheme EasyTierGUI -configuration Release
-```
 
-### 3. 运行应用
+# 编译应用 (arm64 原生)
+./build.sh
 
-```bash
+# 运行应用
 ./launch-easytier-gui.sh
 ```
 
-首次运行时，在设置中选择 `easytier-core` 可执行文件路径。
+### 打包 DMG 安装包
+
+```bash
+# 简单打包
+./create-dmg.sh
+
+# 专业打包（自定义背景、窗口布局）
+./create-dmg-pro.sh
+```
+
+编译产物位置：
+- 应用：`.build/DerivedData/Build/Products/Release/EasyTierGUI.app`
+- 安装包：`EasyTierGUI.dmg`
 
 ## 使用说明
 
@@ -122,6 +125,14 @@ xcodebuild -project EasyTierGUI.xcodeproj -scheme EasyTierGUI -configuration Rel
 ```
 
 ## 故障排除
+
+### 问题：安装 DMG 后提示安装 Rosetta
+
+**原因**：此问题已在最新版本修复。应用现已配置为 arm64 原生构建。
+
+如仍遇到此问题，请确保：
+1. 使用最新的源码重新编译
+2. 运行 `./build.sh` 重新打包
 
 ### 问题：TUN device error: Operation not permitted
 
