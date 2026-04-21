@@ -87,7 +87,7 @@ struct ConfigFormView: View {
                         Toggle("使用 DHCP", isOn: $config.useDHCP)
 
                         if !config.useDHCP {
-                            TextField("IPv4 地址/掩码 (例如: 192.168.55.13/24)", text: $config.tunConfig.ipv4)
+                            TextField("IPv4 地址", text: $config.tunConfig.ipv4)
                                 .disabled(config.useDHCP)
                         }
 

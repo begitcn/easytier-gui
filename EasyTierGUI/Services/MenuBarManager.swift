@@ -79,30 +79,10 @@ class MenuBarManager: ObservableObject {
         }
 
         if let image = NSImage(systemSymbolName: symbolName, accessibilityDescription: "EasyTier Status") {
-            let finalImage: NSImage
-            switch status {
-            case .connected:
-                image.isTemplate = false
-                guard let tinted = image.copy() as? NSImage else { return }
-                tinted.lockFocus()
-                NSColor.systemGreen.withAlphaComponent(0.9).set()
-                NSRect(origin: .zero, size: tinted.size).fill(using: .sourceAtop)
-                tinted.unlockFocus()
-                finalImage = tinted
-            case .connecting:
-                image.isTemplate = false
-                guard let tinted = image.copy() as? NSImage else { return }
-                tinted.lockFocus()
-                NSColor.systemOrange.withAlphaComponent(0.9).set()
-                NSRect(origin: .zero, size: tinted.size).fill(using: .sourceAtop)
-                tinted.unlockFocus()
-                finalImage = tinted
-            default:
-                image.isTemplate = true
-                finalImage = image
-            }
-            cachedImages[status] = finalImage
-            button.image = finalImage
+            // 统一使用黑白配色（template image）
+            image.isTemplate = true
+            cachedImages[status] = image
+            button.image = image
             button.toolTip = "EasyTier - \(status.description)"
         }
     }

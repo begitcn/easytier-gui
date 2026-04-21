@@ -5,12 +5,21 @@
 @implementation PrivilegedExecutor
 
 static AuthorizationRef sAuthorizationRef = NULL;
+static BOOL sIsAuthorized = NO;  // 缓存授权状态，避免重复弹出密码对话框
 
 + (BOOL)ensureAuthorized:(NSError * _Nullable __autoreleasing *)error {
+    // 如果已经是 root 用户，直接返回成功
     if (geteuid() == 0) {
+        sIsAuthorized = YES;
         return YES;
     }
 
+    // 如果已经授权成功，直接返回，不再触发交互
+    if (sIsAuthorized && sAuthorizationRef != NULL) {
+        return YES;
+    }
+
+    // 创建授权引用
     if (sAuthorizationRef == NULL) {
         OSStatus createStatus = AuthorizationCreate(NULL, kAuthorizationEmptyEnvironment, kAuthorizationFlagDefaults, &sAuthorizationRef);
         if (createStatus != errAuthorizationSuccess) {
@@ -23,6 +32,7 @@ static AuthorizationRef sAuthorizationRef = NULL;
         }
     }
 
+    // 请求授权权限（只在第一次时弹出密码对话框）
     AuthorizationItem authItem = { kAuthorizationRightExecute, 0, NULL, 0 };
     AuthorizationRights rights = { 1, &authItem };
     AuthorizationFlags flags = kAuthorizationFlagInteractionAllowed | kAuthorizationFlagExtendRights | kAuthorizationFlagPreAuthorize;
@@ -36,11 +46,15 @@ static AuthorizationRef sAuthorizationRef = NULL;
         return NO;
     }
 
+    // 授权成功，缓存状态
+    sIsAuthorized = YES;
     return YES;
 }
 
 + (NSString *)runCommand:(NSString *)command error:(NSError * _Nullable __autoreleasing *)error {
-    if (![self ensureAuthorized:error]) {
+    // 如果已经授权，跳过 ensureAuthorized 的调用，直接使用缓存的授权引用
+    // 这样避免每次执行命令时都触发 AuthorizationCopyRights
+    if (!sIsAuthorized && ![self ensureAuthorized:error]) {
         return nil;
     }
 

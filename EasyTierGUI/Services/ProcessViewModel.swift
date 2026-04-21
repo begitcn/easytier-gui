@@ -303,8 +303,33 @@ class ProcessViewModel: ObservableObject {
     // MARK: - Config Management
 
     func addNewConfig() {
-        let config = EasyTierConfig(name: "网络 \(configManager.configs.count + 1)")
+        let name = generateUniqueNetworkName()
+        let config = EasyTierConfig(name: name)
         configManager.addConfig(config)
+    }
+
+    /// 生成唯一的网络名称，避免与现有配置重复
+    private func generateUniqueNetworkName() -> String {
+        // 收集所有以"网络 "开头的现有名称中的编号
+        let existingNumbers = configManager.configs.compactMap { config -> Int? in
+            guard config.name.hasPrefix("网络 ") else { return nil }
+            let suffix = String(config.name.dropFirst(3))
+            return Int(suffix)
+        }
+
+        // 如果没有现有编号，从1开始
+        if existingNumbers.isEmpty {
+            return "网络 1"
+        }
+
+        // 找到第一个未被使用的编号
+        let usedNumbers = Set(existingNumbers)
+        var number = 1
+        while usedNumbers.contains(number) {
+            number += 1
+        }
+
+        return "网络 \(number)"
     }
 
     func deleteConfig(at index: Int) {
