@@ -11,7 +11,7 @@ struct ConnectionView: View {
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 24) {
+            VStack(spacing: 20) {
                 // Config List Section (Top)
                 ConfigListSection()
                     .environmentObject(vm)
@@ -25,15 +25,23 @@ struct ConnectionView: View {
                     .id(config.id)
                     .environmentObject(vm)
                 } else {
-                    Text("暂无可用配置")
-                        .foregroundColor(.secondary)
-                        .padding(.top, 40)
+                    VStack(spacing: 12) {
+                        Image(systemName: "rectangle.stack.badge.plus")
+                            .font(.system(size: 40))
+                            .foregroundColor(.secondary.opacity(0.5))
+                        Text("暂无可用配置")
+                            .font(.system(.body, design: .rounded))
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 60)
                 }
             }
-            .padding(32)
-            .frame(maxWidth: 880)
+            .padding(24)
+            .frame(maxWidth: 920)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(NSColor.windowBackgroundColor))
         .onAppear {
             if let config = vm.configManager.activeConfig {
                 editingConfig = config
@@ -58,15 +66,14 @@ struct ConfigFormView: View {
                 Text("配置设置")
                     .font(.system(.title3, design: .rounded).weight(.semibold))
                     .foregroundColor(.primary)
-                    .padding(.horizontal, 4)
                 Spacer()
                 Text("* 为必填项")
-                    .font(.caption)
-                    .foregroundColor(.red.opacity(0.8))
-                    .padding(.horizontal, 4)
+                    .font(.system(size: 11, design: .rounded))
+                    .foregroundColor(.red.opacity(0.7))
             }
+            .padding(.horizontal, 4)
 
-            HStack(alignment: .top, spacing: 16) {
+            HStack(alignment: .top, spacing: 20) {
                 // Left Column
                 Form {
                     Section(header: Text("基础设置").font(.system(.subheadline, design: .rounded))) {
@@ -113,19 +120,13 @@ struct ConfigFormView: View {
                     Section(header: Text("其他选项")) {
                         Stepper("监听端口: \(config.listenPort)", value: $config.listenPort, in: 1...65535)
                         Stepper("管理端口: \(config.rpcPortalPort)", value: $config.rpcPortalPort, in: 1...65535)
-                        Picker("日志级别", selection: $config.logLevel) {
-                            Text("调试").tag("debug")
-                            Text("信息").tag("info")
-                            Text("警告").tag("warn")
-                            Text("错误").tag("error")
-                        }
                     }
                 }
                 .formStyle(.grouped)
                 .scrollContentBackground(.hidden)
                 .background(Color.clear)
             }
-            .frame(minHeight: 380)
+            .frame(minHeight: 360)
             .disabled(vm.activeConfig.map(vm.isRunning) ?? false)
             .onChange(of: config) { _, newValue in
                 onSave(newValue)
@@ -136,13 +137,14 @@ struct ConfigFormView: View {
                 }
             }
         }
-        .padding(24)
+        .padding(20)
         .background(.ultraThinMaterial)
-        .cornerRadius(24)
+        .cornerRadius(20)
         .overlay(
-            RoundedRectangle(cornerRadius: 24)
-                .stroke(Color.white.opacity(0.15), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 20)
+                .stroke(Color.white.opacity(0.12), lineWidth: 1)
         )
+        .shadow(color: Color.black.opacity(0.08), radius: 12, y: 4)
     }
 
     @ViewBuilder
@@ -190,29 +192,63 @@ struct ConfigListSection: View {
     @State private var showExportAllSuccess = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 14) {
             HStack {
                 Text("虚拟网络")
                     .font(.system(.title3, design: .rounded).weight(.semibold))
                     .foregroundColor(.primary)
-                    .padding(.horizontal, 4)
 
                 Spacer()
 
+                // 批量操作按钮
+                HStack(spacing: 6) {
+                    Button(action: { connectAll() }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "link")
+                            Text("全部连接")
+                        }
+                        .font(.system(size: 11, weight: .medium))
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(Color.green.opacity(0.1))
+                    .foregroundColor(.green)
+                    .cornerRadius(6)
+                    .disabled(vm.configManager.configs.isEmpty || vm.isAnyNetworkRunning)
+                    .opacity((vm.configManager.configs.isEmpty || vm.isAnyNetworkRunning) ? 0.5 : 1)
+
+                    Button(action: { disconnectAll() }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "link.circle")
+                            Text("全部断开")
+                        }
+                        .font(.system(size: 11, weight: .medium))
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(Color.red.opacity(0.1))
+                    .foregroundColor(.red)
+                    .cornerRadius(6)
+                    .disabled(!vm.isAnyNetworkRunning)
+                    .opacity(!vm.isAnyNetworkRunning ? 0.5 : 1)
+                }
+
                 // 导入导出按钮
-                HStack(spacing: 8) {
+                HStack(spacing: 6) {
                     Button(action: { importConfig() }) {
                         HStack(spacing: 4) {
                             Image(systemName: "square.and.arrow.down")
                             Text("导入")
                         }
-                        .font(.system(size: 12, weight: .medium))
+                        .font(.system(size: 11, weight: .medium))
                     }
                     .buttonStyle(.plain)
                     .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(Color.blue.opacity(0.1))
-                    .foregroundColor(.blue)
+                    .padding(.vertical, 5)
+                    .background(Color.accentColor.opacity(0.1))
+                    .foregroundColor(.accentColor)
                     .cornerRadius(6)
 
                     Button(action: { exportAllConfigs() }) {
@@ -220,142 +256,163 @@ struct ConfigListSection: View {
                             Image(systemName: "square.and.arrow.up")
                             Text("导出全部")
                         }
-                        .font(.system(size: 12, weight: .medium))
+                        .font(.system(size: 11, weight: .medium))
                     }
                     .buttonStyle(.plain)
                     .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(Color.green.opacity(0.1))
-                    .foregroundColor(.green)
+                    .padding(.vertical, 5)
+                    .background(Color.orange.opacity(0.1))
+                    .foregroundColor(.orange)
                     .cornerRadius(6)
                     .disabled(vm.configManager.configs.isEmpty)
                     .opacity(vm.configManager.configs.isEmpty ? 0.5 : 1)
                 }
             }
+            .padding(.horizontal, 4)
 
-            VStack(spacing: 12) {
+            VStack(spacing: 8) {
                 ForEach(vm.configManager.configs.indices, id: \.self) { index in
                     let config = vm.configManager.configs[index]
                     let isRunning = vm.isRunning(config)
                     let isActive = vm.configManager.activeConfigIndex == index
 
-                    HStack(spacing: 16) {
+                    HStack(spacing: 14) {
+                        // Selection indicator
                         Image(systemName: isActive ? "checkmark.circle.fill" : "circle")
-                            .font(.system(size: 20))
-                            .foregroundColor(isActive ? .accentColor : .secondary.opacity(0.5))
+                            .font(.system(size: 18))
+                            .foregroundColor(isActive ? .accentColor : .secondary.opacity(0.4))
 
-                        VStack(alignment: .leading, spacing: 4) {
-                            HStack {
+                        VStack(alignment: .leading, spacing: 3) {
+                            HStack(spacing: 8) {
                                 Text(config.name)
                                     .font(.system(.body, design: .rounded))
-                                    .fontWeight(isActive ? .bold : .regular)
+                                    .fontWeight(isActive ? .semibold : .regular)
 
                                 if isRunning {
-                                    Text("运行中")
-                                        .font(.system(size: 10, weight: .bold))
-                                        .padding(.horizontal, 6)
-                                        .padding(.vertical, 2)
-                                        .background(Color.green.opacity(0.2))
-                                        .foregroundColor(.green)
-                                        .clipShape(Capsule())
+                                    HStack(spacing: 3) {
+                                        Circle()
+                                            .fill(Color.green)
+                                            .frame(width: 5, height: 5)
+                                        Text("运行中")
+                                    }
+                                    .font(.system(size: 9, weight: .medium))
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 2)
+                                    .background(Color.green.opacity(0.15))
+                                    .foregroundColor(.green)
+                                    .clipShape(Capsule())
                                 }
                             }
 
                             Text(config.networkName.isEmpty ? "未命名网络" : config.networkName)
-                                .font(.caption)
+                                .font(.system(size: 11, design: .rounded))
                                 .foregroundColor(.secondary)
                         }
 
                         Spacer()
 
-                        // 单个配置的导出按钮
-                        Button(action: { exportConfig(config) }) {
-                            Image(systemName: "arrow.up.doc")
-                                .foregroundColor(.secondary)
-                                .frame(width: 28, height: 28)
-                                .background(Color.secondary.opacity(0.1))
-                                .cornerRadius(6)
-                        }
-                        .buttonStyle(.plain)
-                        .help("导出此配置")
+                        // Action buttons
+                        HStack(spacing: 6) {
+                            // Export button
+                            Button(action: { exportConfig(config) }) {
+                                Image(systemName: "arrow.up.doc")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(.secondary)
+                                    .frame(width: 26, height: 26)
+                                    .background(Color.secondary.opacity(0.08))
+                                    .cornerRadius(6)
+                            }
+                            .buttonStyle(.plain)
+                            .help("导出此配置")
 
-                        Button(isRunning ? "断开" : "连接") {
-                            if isRunning {
-                                Task { await vm.disconnect(configID: config.id) }
-                            } else {
-                                // Validate required fields
-                                if let msg = validateConfig(config) {
-                                    validationMessage = msg
-                                    showValidationAlert = true
+                            // Connect/Disconnect button
+                            Button(isRunning ? "断开" : "连接") {
+                                if isRunning {
+                                    Task { await vm.disconnect(configID: config.id) }
                                 } else {
-                                    Task { await vm.connect(configID: config.id) }
+                                    // Validate required fields
+                                    if let msg = validateConfig(config) {
+                                        validationMessage = msg
+                                        showValidationAlert = true
+                                    } else {
+                                        Task { await vm.connect(configID: config.id) }
+                                    }
                                 }
                             }
-                        }
-                        .buttonStyle(.plain)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        .background(isRunning ? Color.red.opacity(0.15) : Color.blue.opacity(0.15))
-                        .foregroundColor(isRunning ? .red : .blue)
-                        .cornerRadius(8)
+                            .buttonStyle(.plain)
+                            .font(.system(size: 12, weight: .medium))
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 6)
+                            .background(isRunning ? Color.red.opacity(0.12) : Color.accentColor.opacity(0.12))
+                            .foregroundColor(isRunning ? .red : .accentColor)
+                            .cornerRadius(6)
 
-                        Button(action: {
-                            withAnimation {
-                                vm.configManager.deleteConfig(at: index)
+                            // Delete button
+                            Button(action: {
+                                withAnimation {
+                                    vm.configManager.deleteConfig(at: index)
+                                }
+                            }) {
+                                Image(systemName: "trash")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(.red.opacity(0.7))
+                                    .frame(width: 26, height: 26)
+                                    .background(Color.red.opacity(0.08))
+                                    .cornerRadius(6)
                             }
-                        }) {
-                            Image(systemName: "trash")
-                                .foregroundColor(.red.opacity(0.8))
-                                .frame(width: 32, height: 32)
-                                .background(Color.red.opacity(0.1))
-                                .cornerRadius(8)
+                            .buttonStyle(.plain)
+                            .disabled(isRunning || vm.configManager.configs.count <= 1)
+                            .opacity((isRunning || vm.configManager.configs.count <= 1) ? 0.3 : 1)
                         }
-                        .buttonStyle(.plain)
-                        .disabled(isRunning || vm.configManager.configs.count <= 1)
-                        .opacity((isRunning || vm.configManager.configs.count <= 1) ? 0.3 : 1)
                     }
-                    .padding(16)
-                    .background(isActive ? Color.accentColor.opacity(0.1) : Color(NSColor.controlBackgroundColor).opacity(0.3))
-                    .cornerRadius(16)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 12)
+                    .background(isActive ? Color.accentColor.opacity(0.08) : Color(NSColor.controlBackgroundColor).opacity(0.4))
+                    .cornerRadius(12)
                     .overlay(
-                        RoundedRectangle(cornerRadius: 16)
-                            .stroke(isActive ? Color.accentColor.opacity(0.4) : Color.white.opacity(0.05), lineWidth: 1)
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(isActive ? Color.accentColor.opacity(0.3) : Color.white.opacity(0.06), lineWidth: 1)
                     )
                     .contentShape(Rectangle())
                     .onTapGesture {
-                        withAnimation {
+                        withAnimation(.easeInOut(duration: 0.2)) {
                             vm.configManager.setActiveConfig(at: index)
                         }
                     }
                 }
             }
 
+            // Add button
             Button(action: {
                 withAnimation {
                     vm.addNewConfig()
                 }
             }) {
-                HStack {
+                HStack(spacing: 6) {
                     Image(systemName: "plus.circle.fill")
+                        .font(.system(size: 14))
                     Text("添加虚拟网络")
+                        .font(.system(size: 12, weight: .medium))
                 }
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
+                .padding(.vertical, 12)
                 .background(Color(NSColor.controlBackgroundColor).opacity(0.3))
-                .cornerRadius(12)
+                .cornerRadius(10)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.1), style: StrokeStyle(lineWidth: 1, dash: [5]))
+                    RoundedRectangle(cornerRadius: 10).stroke(Color.white.opacity(0.08), style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
                 )
             }
             .buttonStyle(.plain)
+            .foregroundColor(.secondary)
         }
-        .padding(24)
+        .padding(20)
         .background(.ultraThinMaterial)
-        .cornerRadius(24)
+        .cornerRadius(20)
         .overlay(
-            RoundedRectangle(cornerRadius: 24)
-                .stroke(Color.white.opacity(0.15), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 20)
+                .stroke(Color.white.opacity(0.12), lineWidth: 1)
         )
+        .shadow(color: Color.black.opacity(0.08), radius: 12, y: 4)
         .alert("必填项未完成", isPresented: $showValidationAlert) {
             Button("好的", role: .cancel) {}
         } message: {
@@ -452,6 +509,28 @@ struct ConfigListSection: View {
         if config.serverURI.trimmingCharacters(in: .whitespaces).isEmpty { missing.append("服务器地址") }
         guard !missing.isEmpty else { return nil }
         return "以下必填项不能为空：\n" + missing.map { "• \($0)" }.joined(separator: "\n")
+    }
+
+    // MARK: - Batch Operations
+
+    private func connectAll() {
+        Task {
+            for config in vm.configManager.configs {
+                if !vm.isRunning(config) && validateConfig(config) == nil {
+                    await vm.connect(configID: config.id)
+                }
+            }
+        }
+    }
+
+    private func disconnectAll() {
+        Task {
+            for config in vm.configManager.configs {
+                if vm.isRunning(config) {
+                    await vm.disconnect(configID: config.id)
+                }
+            }
+        }
     }
 }
 

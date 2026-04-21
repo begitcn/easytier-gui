@@ -74,7 +74,8 @@ struct EasyTierGUIApp: App {
                         Task {
                             // Short delay to let the UI settle before connecting
                             try? await Task.sleep(nanoseconds: 800_000_000)
-                            await processVM.connect()
+                            // Connect all networks
+                            await processVM.connectAll()
                         }
                     }
                 }

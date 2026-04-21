@@ -11,7 +11,6 @@ struct SettingsView: View {
     @AppStorage("showMenuBar") private var showMenuBar = true
     @AppStorage("autoConnectOnLaunch") private var autoConnectOnLaunch = false
     @AppStorage("showDockIcon") private var showDockIcon = true
-    @AppStorage("logMaxEntries") private var logMaxEntries = 10000
 
     @State private var openAtLoginManager = OpenAtLoginManager()
     @State private var detectedCoreVersion: String = "检测中..."
@@ -19,14 +18,6 @@ struct SettingsView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            Text("设置首选项")
-                .font(.system(.title2, design: .rounded).weight(.bold))
-                .foregroundColor(.primary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 24)
-                .padding(.top, 24)
-                .padding(.bottom, 8)
-
             VStack(spacing: 0) {
                 Form {
                     Section(header: Text("EasyTier").font(.system(.subheadline, design: .rounded))) {
@@ -101,18 +92,6 @@ struct SettingsView: View {
                         Toggle("启动时自动连接", isOn: $autoConnectOnLaunch)
                     }
 
-                    Section(header: Text("日志").font(.system(.subheadline, design: .rounded))) {
-                        Stepper("最大日志条数: \(logMaxEntries)",
-                                value: $logMaxEntries,
-                                in: 1000...100000,
-                                step: 1000)
-
-                        Button("清空所有日志") {
-                            vm.clearAllLogs()
-                        }
-                        .foregroundColor(.red)
-                    }
-
                     Section(header: Text("关于").font(.system(.subheadline, design: .rounded))) {
                         LabeledContent("应用程序") {
                             Text("EasyTier GUI")
@@ -135,12 +114,12 @@ struct SettingsView: View {
                 .background(Color.clear)
             }
             .background(.ultraThinMaterial)
-            .cornerRadius(24)
+            .cornerRadius(20)
             .overlay(
-                RoundedRectangle(cornerRadius: 24)
-                    .stroke(Color.white.opacity(0.15), lineWidth: 1)
+                RoundedRectangle(cornerRadius: 20)
+                    .stroke(Color.white.opacity(0.12), lineWidth: 1)
             )
-            .shadow(color: Color.black.opacity(0.1), radius: 15, y: 5)
+            .shadow(color: Color.black.opacity(0.08), radius: 12, y: 4)
             .padding(.horizontal, 24)
             .padding(.bottom, 24)
         }

@@ -6,22 +6,10 @@ import SwiftUI
 struct LogView: View {
     @EnvironmentObject var vm: ProcessViewModel
     @State private var searchText = ""
-    @State private var selectedLevel: String = "全部"
     @State private var autoScroll = true
-    @State private var showLogLevels = true
-
-    var logLevels: [String] = ["全部", "调试", "信息", "警告", "错误"]
 
     var filteredLogs: [LogEntry] {
         var logs = vm.activeRuntime?.service.logEntries ?? []
-
-        // Filter by level
-        if selectedLevel != "全部" {
-            let levelMap = ["调试": "debug", "信息": "info", "警告": "warn", "错误": "error"]
-            if let levelFilter = levelMap[selectedLevel] {
-                logs = logs.filter { $0.level.lowercased() == levelFilter }
-            }
-        }
 
         // Filter by search
         if !searchText.isEmpty {
@@ -34,26 +22,9 @@ struct LogView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            Text("运行日志")
-                .font(.system(.title2, design: .rounded).weight(.bold))
-                .foregroundColor(.primary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 24)
-                .padding(.top, 24)
-                .padding(.bottom, 8)
-
             VStack(spacing: 0) {
                 // Toolbar
                 HStack(spacing: 16) {
-                    // Level filter
-                    Picker("", selection: $selectedLevel) {
-                        ForEach(logLevels, id: \.self) { level in
-                            Text(level).tag(level)
-                        }
-                    }
-                    .pickerStyle(.menu)
-                    .frame(width: 140)
-
                     // Search
                     HStack {
                         Image(systemName: "magnifyingglass").foregroundColor(.secondary)
@@ -116,10 +87,10 @@ struct LogView: View {
                             .padding(.horizontal, 20)
                             .padding(.bottom, 20)
                         }
-                        .onChange(of: filteredLogs.count) { _, _ in
-                            if autoScroll, let lastLog = filteredLogs.last {
+                        .onChange(of: filteredLogs.last?.id) { _, newId in
+                            if autoScroll, let id = newId {
                                 withAnimation(.easeOut.speed(0.5)) {
-                                    proxy.scrollTo(lastLog.id, anchor: .bottom)
+                                    proxy.scrollTo(id, anchor: .bottom)
                                 }
                             }
                         }
@@ -167,15 +138,14 @@ struct LogView: View {
                 .background(Color.black.opacity(0.1))
             }
             .background(.ultraThinMaterial)
-            .cornerRadius(24)
+            .cornerRadius(20)
             .overlay(
-                RoundedRectangle(cornerRadius: 24)
-                    .stroke(Color.white.opacity(0.15), lineWidth: 1)
+                RoundedRectangle(cornerRadius: 20)
+                    .stroke(Color.white.opacity(0.12), lineWidth: 1)
             )
-            .shadow(color: Color.black.opacity(0.1), radius: 15, y: 5)
+            .shadow(color: Color.black.opacity(0.08), radius: 12, y: 4)
             .padding(.horizontal, 24)
             .padding(.bottom, 24)
-            .clipShape(RoundedRectangle(cornerRadius: 24))
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(NSColor.windowBackgroundColor))
@@ -219,16 +189,6 @@ struct LogEntryRow: View {
                 .foregroundColor(.secondary)
                 .frame(width: 80, alignment: .leading)
                 .padding(.top, 4)
-
-            Text(entry.level.uppercased())
-                .font(.system(size: 10, weight: .bold, design: .monospaced))
-                .foregroundColor(entry.levelColor)
-                .padding(.horizontal, 6)
-                .padding(.vertical, 3)
-                .background(entry.levelColor.opacity(0.15))
-                .clipShape(Capsule())
-                .frame(width: 60, alignment: .leading)
-                .padding(.top, 2)
 
             Text(entry.message)
                 .font(.system(.body, design: .monospaced))

@@ -225,6 +225,25 @@ class ProcessViewModel: ObservableObject {
         await disconnect(configID: config.id)
     }
 
+    func connectAll() async {
+        // Connect all networks sequentially to avoid race conditions
+        for config in configManager.configs {
+            await connect(configID: config.id)
+        }
+    }
+
+    func disconnectAll() async {
+        // Disconnect all networks in parallel
+        await withTaskGroup(of: Void.self) { group in
+            for runtime in runtimes.values {
+                group.addTask {
+                    await runtime.disconnect()
+                }
+            }
+        }
+        refreshOverallStatus()
+    }
+
     func connect(configID: UUID) async {
         guard let config = configManager.configs.first(where: { $0.id == configID }) else { return }
         let runtime = runtime(for: configID)
@@ -273,12 +292,6 @@ class ProcessViewModel: ObservableObject {
 
     func clearActiveLogs() {
         activeRuntime?.clearLogs()
-    }
-
-    func clearAllLogs() {
-        for runtime in runtimes.values {
-            runtime.clearLogs()
-        }
     }
 
     func forceStopAllSync() {

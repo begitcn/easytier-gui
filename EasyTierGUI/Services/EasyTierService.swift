@@ -205,11 +205,6 @@ class EasyTierService: ObservableObject {
         args.append(contentsOf: ["--listeners", "tcp://0.0.0.0:\(config.listenPort)"])
         args.append(contentsOf: ["--instance-name", "etgui-\(config.id.uuidString.prefix(8))"])
 
-        // 额外节点
-        for peer in config.peers {
-            args.append(contentsOf: ["--peers", peer])
-        }
-
         // 高级选项
         if config.enableLatencyFirst { args.append("--latency-first") }
         args.append(contentsOf: ["--private-mode", config.enablePrivateMode ? "true" : "false"])

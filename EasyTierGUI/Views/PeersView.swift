@@ -17,7 +17,7 @@ struct PeersView: View {
     }
 
     enum SortKey: String, CaseIterable {
-        case hostname, ipv4, latency, cost, status
+        case hostname, ipv4, latency, cost
 
         var label: String {
             switch self {
@@ -25,7 +25,6 @@ struct PeersView: View {
             case .ipv4: return "IP 地址"
             case .latency: return "延迟"
             case .cost: return "连接方式"
-            case .status: return "状态"
             }
         }
     }
@@ -51,9 +50,6 @@ struct PeersView: View {
             case .ipv4: return a.ipv4.localizedStandardCompare(b.ipv4) == .orderedAscending
             case .latency: return (a.latencyMs ?? Double.greatestFiniteMagnitude) < (b.latencyMs ?? Double.greatestFiniteMagnitude)
             case .cost: return (a.cost ?? "") < (b.cost ?? "")
-            case .status:
-                let statusOrder: [PeerInfo.PeerStatus: Int] = [.online: 0, .connecting: 1, .offline: 2]
-                return (statusOrder[a.status] ?? 3) < (statusOrder[b.status] ?? 3)
             }
         }
 
@@ -62,14 +58,6 @@ struct PeersView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            Text("节点详情")
-                .font(.system(.title2, design: .rounded).weight(.bold))
-                .foregroundColor(.primary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 24)
-                .padding(.top, 24)
-                .padding(.bottom, 8)
-
             VStack(spacing: 0) {
                 // Toolbar
                 HStack(spacing: 16) {
@@ -108,8 +96,8 @@ struct PeersView: View {
                         Text(vm.activeConfig?.name ?? "未选择网络")
                             .font(.system(.caption, design: .rounded).weight(.semibold))
                             .foregroundColor(.primary)
-                        
-                        Text("\(vm.peers.filter { $0.status == .online }.count) 在线 / \(vm.peers.count) 总计")
+
+                        Text("\(vm.peers.count) 个节点")
                             .font(.system(.caption2, design: .monospaced))
                             .foregroundColor(.secondary)
                     }
@@ -139,83 +127,111 @@ struct PeersView: View {
                     )
                     .frame(maxHeight: .infinity)
                 } else {
-                    Table(filteredPeers) {
-                        TableColumn("状态") { peer in
-                            ZStack {
-                                if peer.status == .online {
-                                    Circle()
-                                        .fill(Color.green.opacity(0.2))
-                                        .frame(width: 24, height: 24)
-                                } else if peer.status == .connecting {
-                                    Circle()
-                                        .fill(Color.orange.opacity(0.2))
-                                        .frame(width: 24, height: 24)
-                                }
-                                
-                                Image(systemName: peer.status == .online ? "checkmark.circle.fill" :
-                                        peer.status == .connecting ? "arrow.triangle.2.circlepath.circle.fill" :
-                                        "xmark.circle.fill")
-                                    .foregroundColor(peer.status == .online ? .green :
-                                                        peer.status == .connecting ? .orange : .gray.opacity(0.4))
-                            }
-                        }
-                        .width(60)
+                    VStack(spacing: 0) {
+                        // 表头
+                        HStack(spacing: 16) {
+                            Text("主机名")
+                                .font(.system(.caption, design: .rounded).weight(.semibold))
+                                .foregroundColor(.secondary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
 
-                        TableColumn("主机名") { peer in
-                            Text(peer.hostname)
-                                .font(.system(.body, design: .monospaced))
-                                .fontWeight(.semibold)
-                        }
+                            Text("IPv4")
+                                .font(.system(.caption, design: .rounded).weight(.semibold))
+                                .foregroundColor(.secondary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
 
-                        TableColumn("IPv4") { peer in
-                            Text(peer.ipv4)
-                                .font(.system(.body, design: .monospaced))
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(Color.secondary.opacity(0.1))
-                                .cornerRadius(4)
-                                .contextMenu {
-                                    Button("复制 IPv4") {
-                                        copyToPasteboard(peer.ipv4)
+                            Text("延迟")
+                                .font(.system(.caption, design: .rounded).weight(.semibold))
+                                .foregroundColor(.secondary)
+                                .frame(width: 90, alignment: .trailing)
+
+                            Text("连接方式")
+                                .font(.system(.caption, design: .rounded).weight(.semibold))
+                                .foregroundColor(.secondary)
+                                .frame(width: 80, alignment: .center)
+                        }
+                        .padding(.horizontal, 24)
+                        .padding(.vertical, 8)
+                        .background(Color(NSColor.controlBackgroundColor).opacity(0.5))
+
+                        Divider()
+
+                        // 节点列表
+                        List {
+                            ForEach(filteredPeers) { peer in
+                                HStack(spacing: 16) {
+                                    // 主机名
+                                    HStack(spacing: 4) {
+                                        if peer.cost == "Local" {
+                                            Image(systemName: "star.fill")
+                                                .foregroundColor(.accentColor)
+                                                .font(.system(.caption2))
+                                        }
+                                        Text(peer.hostname)
+                                            .font(.system(.body, design: .monospaced))
+                                            .fontWeight(.semibold)
+                                            .lineLimit(1)
                                     }
-                                }
-                        }
+                                    .frame(maxWidth: .infinity, alignment: .leading)
 
-                        TableColumn("延迟") { peer in
-                            if let latency = peer.latencyMs {
-                                Text("\(formatLatency(latency)) ms")
-                                    .font(.system(.body, design: .monospaced))
-                                    .foregroundColor(latencyColor(latency))
-                            } else {
-                                Text("-")
-                                    .foregroundColor(.secondary)
+                                    // IPv4
+                                    Text(peer.ipv4)
+                                        .font(.system(.body, design: .monospaced))
+                                        .padding(.horizontal, 6)
+                                        .padding(.vertical, 2)
+                                        .background(Color.secondary.opacity(0.1))
+                                        .cornerRadius(4)
+                                        .contextMenu {
+                                            Button("复制 IPv4") {
+                                                copyToPasteboard(peer.ipv4)
+                                            }
+                                        }
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                                    // 延迟
+                                    if let latency = peer.latencyMs {
+                                        Text("\(formatLatency(latency)) ms")
+                                            .font(.system(.body, design: .monospaced))
+                                            .foregroundColor(latencyColor(latency))
+                                            .frame(width: 90, alignment: .trailing)
+                                    } else {
+                                        Text("-")
+                                            .foregroundColor(.secondary)
+                                            .frame(width: 90, alignment: .trailing)
+                                    }
+
+                                    // 连接方式
+                                    Text(peer.cost ?? "-")
+                                        .font(.system(.caption, design: .rounded))
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 4)
+                                        .background(peer.cost == nil ? Color.clear : (peer.cost == "Local" ? Color.accentColor.opacity(0.3) : Color.accentColor.opacity(0.15)))
+                                        .foregroundColor(peer.cost == nil ? .secondary : .accentColor)
+                                        .clipShape(Capsule())
+                                        .frame(width: 80, alignment: .center)
+                                }
+                                .padding(.vertical, 4)
+                                .padding(.horizontal, 8)
+                                .contentShape(Rectangle())
+                                .listRowBackground(
+                                    peer.cost == "Local"
+                                        ? Color.accentColor.opacity(0.12)
+                                        : Color.clear
+                                )
                             }
                         }
-                        .width(80)
-
-                        TableColumn("连接方式") { peer in
-                            Text(peer.cost ?? "-")
-                                .font(.system(.caption, design: .rounded))
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(peer.cost == nil ? Color.clear : Color.accentColor.opacity(0.15))
-                                .foregroundColor(peer.cost == nil ? .secondary : .accentColor)
-                                .clipShape(Capsule())
-                        }
-                        .width(90)
+                        .listStyle(.plain)
+                        .scrollContentBackground(.hidden)
                     }
-                    .tableStyle(.bordered)
-                    .scrollContentBackground(.hidden)
-                    .background(Color.clear)
                 }
             }
             .background(.ultraThinMaterial)
-            .cornerRadius(24)
+            .cornerRadius(20)
             .overlay(
-                RoundedRectangle(cornerRadius: 24)
-                    .stroke(Color.white.opacity(0.15), lineWidth: 1)
+                RoundedRectangle(cornerRadius: 20)
+                    .stroke(Color.white.opacity(0.12), lineWidth: 1)
             )
-            .shadow(color: Color.black.opacity(0.1), radius: 15, y: 5)
+            .shadow(color: Color.black.opacity(0.08), radius: 12, y: 4)
             .padding(.horizontal, 24)
             .padding(.bottom, 24)
         }

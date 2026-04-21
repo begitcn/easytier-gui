@@ -60,10 +60,8 @@ struct EasyTierConfig: Codable, Identifiable, Equatable {
     // MARK: - 网络设置
     var listenPort: Int        // 监听端口
     var rpcPortalPort: Int     // RPC 管理端口
-    var peers: [String]        // 额外节点列表
     var tunConfig: TunConfig   // TUN 设备配置
     var useDHCP: Bool          // 使用 DHCP (否则静态 IP)
-    var logLevel: String       // 日志级别
 
     // MARK: - Initialization
 
@@ -80,10 +78,8 @@ struct EasyTierConfig: Codable, Identifiable, Equatable {
         enableKCP: Bool = false,
         listenPort: Int = 11010,
         rpcPortalPort: Int = 15888,
-        peers: [String] = [],
         tunConfig: TunConfig? = nil,
-        useDHCP: Bool = true,
-        logLevel: String = "info"
+        useDHCP: Bool = true
     ) {
         self.id = UUID()
         self.name = name
@@ -98,10 +94,8 @@ struct EasyTierConfig: Codable, Identifiable, Equatable {
         self.enableKCP = enableKCP
         self.listenPort = listenPort
         self.rpcPortalPort = rpcPortalPort
-        self.peers = peers
         self.tunConfig = tunConfig ?? TunConfig()
         self.useDHCP = useDHCP
-        self.logLevel = logLevel
     }
 
     // MARK: - Codable (向后兼容)
@@ -110,7 +104,7 @@ struct EasyTierConfig: Codable, Identifiable, Equatable {
         case id, name, networkName, networkPassword, serverURI, hostname
         case enableLatencyFirst, enablePrivateMode, enableMagicDNS
         case enableMultiThread, enableKCP
-        case listenPort, rpcPortalPort, peers, tunConfig, useDHCP, logLevel
+        case listenPort, rpcPortalPort, tunConfig, useDHCP
     }
 
     init(from decoder: Decoder) throws {
@@ -128,10 +122,8 @@ struct EasyTierConfig: Codable, Identifiable, Equatable {
         enableKCP = try container.decodeIfPresent(Bool.self, forKey: .enableKCP) ?? false
         listenPort = try container.decodeIfPresent(Int.self, forKey: .listenPort) ?? 11010
         rpcPortalPort = try container.decodeIfPresent(Int.self, forKey: .rpcPortalPort) ?? 15888
-        peers = try container.decodeIfPresent([String].self, forKey: .peers) ?? []
         tunConfig = try container.decodeIfPresent(TunConfig.self, forKey: .tunConfig) ?? TunConfig()
         useDHCP = try container.decodeIfPresent(Bool.self, forKey: .useDHCP) ?? true
-        logLevel = try container.decodeIfPresent(String.self, forKey: .logLevel) ?? "info"
     }
 }
 
@@ -166,7 +158,7 @@ struct PeerInfo: Identifiable, Equatable {
 
     /// 节点在线状态
     enum PeerStatus: String, Equatable {
-        case online, offline, connecting
+        case online, offline
     }
 }
 

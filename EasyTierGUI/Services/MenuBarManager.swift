@@ -162,7 +162,10 @@ class MenuBarManager: ObservableObject {
         menu.addItem(NSMenuItem.separator())
 
         menu.addItem(NSMenuItem(title: "显示主界面", action: #selector(AppDelegate.openMainWindow(_:)), keyEquivalent: ""))
-        menu.addItem(NSMenuItem(title: "退出", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
+
+        let quitItem = NSMenuItem(title: "退出", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        quitItem.image = nil
+        menu.addItem(quitItem)
 
         return menu
     }
