@@ -20,7 +20,10 @@
 		A1000000000000000000000B /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000000B /* Models.swift */; };
 		A1000000000000000000000C /* MenuBarManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000000C /* MenuBarManager.swift */; };
 		A1000000000000000000000D /* PrivilegedExecutor.m in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000000D /* PrivilegedExecutor.m */; };
-/* End PBXBuildFile section */
+		A1000000000000000000000E /* BinaryVersion.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000010 /* BinaryVersion.swift */; };
+		A1000000000000000000000F /* BinaryManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000011 /* BinaryManager.swift */; };
+		A10000000000000000000010 /* GitHubReleaseService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000012 /* GitHubReleaseService.swift */; };
+		A10000000000000000000011 /* UpdateBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000013 /* UpdateBanner.swift */; };
 
 /* Begin PBXFileReference section */
 		A20000000000000000000001 /* EasyTierGUIApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EasyTierGUIApp.swift; sourceTree = "<group>"; };
@@ -38,6 +41,10 @@
 		A2000000000000000000000D /* PrivilegedExecutor.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = PrivilegedExecutor.m; sourceTree = "<group>"; };
 		A2000000000000000000000E /* PrivilegedExecutor.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PrivilegedExecutor.h; sourceTree = "<group>"; };
 		A2000000000000000000000F /* EasyTierGUI-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "EasyTierGUI-Bridging-Header.h"; sourceTree = "<group>"; };
+		A20000000000000000000010 /* BinaryVersion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BinaryVersion.swift; sourceTree = "<group>"; };
+		A20000000000000000000011 /* BinaryManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BinaryManager.swift; sourceTree = "<group>"; };
+		A20000000000000000000012 /* GitHubReleaseService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitHubReleaseService.swift; sourceTree = "<group>"; };
+		A20000000000000000000013 /* UpdateBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateBanner.swift; sourceTree = "<group>"; };
 		A30000000000000000000001 /* EasyTierGUI.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = EasyTierGUI.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -89,6 +96,7 @@
 				A20000000000000000000008 /* PeersView.swift */,
 				A20000000000000000000009 /* LogView.swift */,
 				A2000000000000000000000A /* SettingsView.swift */,
+				A50000000000000000000007 /* Components */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -100,6 +108,8 @@
 				A20000000000000000000005 /* EasyTierService.swift */,
 				A20000000000000000000006 /* ConfigManager.swift */,
 				A2000000000000000000000C /* MenuBarManager.swift */,
+				A20000000000000000000012 /* GitHubReleaseService.swift */,
+				A20000000000000000000011 /* BinaryManager.swift */,
 				A2000000000000000000000D /* PrivilegedExecutor.m */,
 				A2000000000000000000000E /* PrivilegedExecutor.h */,
 			);
@@ -110,8 +120,17 @@
 			isa = PBXGroup;
 			children = (
 				A2000000000000000000000B /* Models.swift */,
+				A20000000000000000000010 /* BinaryVersion.swift */,
 			);
 			path = Models;
+			sourceTree = "<group>";
+		};
+		A50000000000000000000007 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				A20000000000000000000013 /* UpdateBanner.swift */,
+			);
+			path = Components;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -196,6 +215,10 @@
 				A1000000000000000000000B /* Models.swift in Sources */,
 				A1000000000000000000000C /* MenuBarManager.swift in Sources */,
 				A1000000000000000000000D /* PrivilegedExecutor.m in Sources */,
+				A1000000000000000000000E /* BinaryVersion.swift in Sources */,
+				A1000000000000000000000F /* BinaryManager.swift in Sources */,
+				A10000000000000000000010 /* GitHubReleaseService.swift in Sources */,
+				A10000000000000000000011 /* UpdateBanner.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

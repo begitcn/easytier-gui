@@ -71,14 +71,9 @@ class EasyTierService: ObservableObject {
     private var privilegedLogOffset: UInt64 = 0
     private var privilegedPID: Int32?
 
-    /// 配置的可执行文件路径
-    var configuredPath: String {
-        UserDefaults.standard.string(forKey: "easytierPath") ?? "/usr/local/bin"
-    }
-
     /// 解析后的可执行文件路径
     var executablePath: String {
-        resolvedBinaryPath(for: ["easytier-core", "easytier"])
+        BinaryManager.resolveBinaryPath(for: .core).path
     }
 
     // MARK: - Process Control
@@ -131,6 +126,11 @@ class EasyTierService: ObservableObject {
 
         // 停止特权进程
         if getuid() != 0, process == nil {
+            guard shouldStopPrivilegedProcess else {
+                stopPrivilegedLogPolling()
+                publishRunning(false)
+                return
+            }
             try stopPrivileged()
             privilegedPID = nil
             stopPrivilegedLogPolling()
@@ -165,7 +165,7 @@ class EasyTierService: ObservableObject {
 
         process?.terminate()
 
-        if privilegedPID != nil || getuid() != 0 {
+        if shouldStopPrivilegedProcess {
             try? stopPrivileged()
         }
 
@@ -367,8 +367,8 @@ class EasyTierService: ObservableObject {
     }
 
     private func easytierCLIPath() -> String? {
-        let path = resolvedBinaryPath(for: ["easytier-cli"])
-        return FileManager.default.isExecutableFile(atPath: path) ? path : nil
+        let path = BinaryManager.resolveBinaryPath(for: .cli)
+        return FileManager.default.isExecutableFile(atPath: path.path) ? path.path : nil
     }
 
     private func decodePeers(from data: Data) -> [PeerInfo] {
@@ -402,35 +402,6 @@ class EasyTierService: ObservableObject {
 
     // MARK: - Helpers
 
-    private func resolvedBinaryPath(for names: [String]) -> String {
-        let configuredURL = URL(fileURLWithPath: configuredPath)
-        var searchDirectories: [URL] = []
-
-        var isDirectory: ObjCBool = false
-        if FileManager.default.fileExists(atPath: configuredURL.path, isDirectory: &isDirectory), isDirectory.boolValue {
-            searchDirectories.append(configuredURL)
-        } else {
-            let fileName = configuredURL.lastPathComponent
-            if names.contains(fileName), FileManager.default.isExecutableFile(atPath: configuredURL.path) {
-                return configuredURL.path
-            }
-            searchDirectories.append(configuredURL.deletingLastPathComponent())
-        }
-
-        searchDirectories.append(URL(fileURLWithPath: "/usr/local/bin"))
-        searchDirectories.append(URL(fileURLWithPath: "/opt/homebrew/bin"))
-
-        for directory in searchDirectories {
-            for name in names {
-                let candidate = directory.appendingPathComponent(name).path
-                if FileManager.default.isExecutableFile(atPath: candidate) {
-                    return candidate
-                }
-            }
-        }
-        return configuredURL.path
-    }
-
     private func shellQuote(_ s: String) -> String {
         if s.isEmpty { return "''" }
         return "'\(s.replacingOccurrences(of: "'", with: "'\\\\''"))'"
@@ -461,6 +432,16 @@ class EasyTierService: ObservableObject {
             self.trimProcessOutput()
             self.parseLogEntries(output)
         }
+    }
+
+    private var shouldStopPrivilegedProcess: Bool {
+        guard getuid() != 0 else { return false }
+        guard let pid = privilegedPID else { return false }
+        if kill(pid, 0) == 0 || errno == EPERM {
+            return true
+        }
+        privilegedPID = nil
+        return false
     }
 
     // MARK: - Privileged Log Polling

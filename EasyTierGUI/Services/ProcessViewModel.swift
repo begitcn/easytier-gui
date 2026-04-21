@@ -139,6 +139,7 @@ class ProcessViewModel: ObservableObject {
     @Published private(set) var runtimes: [UUID: NetworkRuntime] = [:]
 
     private var cancellables = Set<AnyCancellable>()
+    private let kLastUpdateCheck = "easytierLastUpdateCheck"
 
     // MARK: - Initialization
 
@@ -161,15 +162,31 @@ class ProcessViewModel: ObservableObject {
                 self?.objectWillChange.send()
             }
             .store(in: &cancellables)
+
+        // 后台检查 EasyTier 核心版本更新
+        Task {
+            try? await Task.sleep(nanoseconds: 3_000_000_000) // 延迟 3 秒
+            await checkForBinaryUpdate()
+        }
     }
 
     // MARK: - Core Detection
 
     /// 检测 easytier-core 是否存在
     var easytierCoreExists: Bool {
-        let easytierPath = UserDefaults.standard.string(forKey: "easytierPath") ?? "/usr/local/bin"
-        let corePath = URL(fileURLWithPath: easytierPath).appendingPathComponent("easytier-core").path
-        return FileManager.default.isExecutableFile(atPath: corePath)
+        BinaryManager.shared.binaryExists(for: .core)
+    }
+
+    // MARK: - Binary Update Check
+
+    private func checkForBinaryUpdate() async {
+        if let lastCheck = UserDefaults.standard.object(forKey: kLastUpdateCheck) as? Date {
+            let elapsed = Date().timeIntervalSince(lastCheck)
+            if elapsed < 86400 { // 24h 节流，避免频繁请求远端
+                return
+            }
+        }
+        await BinaryManager.shared.checkForUpdate()
     }
 
     // MARK: - Active Config/Runtime

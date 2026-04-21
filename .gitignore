@@ -1,6 +1,9 @@
 # Xcode
+build/
 .build/
 .deriveddata/
+DerivedData/
+*.xcbuilddata
 *.xcresult
 xcuserdata/
 *.xcuserstate

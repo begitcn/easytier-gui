@@ -1,62 +1,45 @@
+//
+//  SettingsView.swift
+//  EasyTierGUI
+//
+//  应用设置和偏好
+//
+
 import SwiftUI
 import ServiceManagement
 
 // MARK: - SettingsView
-// Application settings and preferences
 
 struct SettingsView: View {
     @EnvironmentObject var vm: ProcessViewModel
-    @AppStorage("easytierPath") private var easytierPath = "/usr/local/bin"
+    @StateObject private var binaryManager = BinaryManager.shared
+
     @AppStorage("startAtLogin") private var startAtLogin = false
     @AppStorage("showMenuBar") private var showMenuBar = true
     @AppStorage("autoConnectOnLaunch") private var autoConnectOnLaunch = false
     @AppStorage("showDockIcon") private var showDockIcon = true
 
     @State private var openAtLoginManager = OpenAtLoginManager()
-    @State private var detectedCoreVersion: String = "检测中..."
     @State private var showVisibilityAlert = false
+    @State private var showResetConfirmation = false
 
     var body: some View {
         VStack(spacing: 0) {
             VStack(spacing: 0) {
                 Form {
+                    // MARK: - EasyTier Section
                     Section(header: Text("EasyTier").font(.system(.subheadline, design: .rounded))) {
-                        LabeledContent("EasyTier 目录") {
-                            HStack {
-                                TextField("", text: $easytierPath)
-                                    .disabled(vm.isAnyNetworkRunning)
+                        // 更新状态横幅
+                        updateBannerSection
 
-                                Button("浏览...") {
-                                    showDirectoryPicker()
-                                }
-                                .disabled(vm.isAnyNetworkRunning)
-                            }
-                            .frame(width: 400)
-                        }
+                        // 版本信息
+                        versionInfoSection
 
-                        if let detectedCore = detectedBinaryPath(named: "easytier-core") {
-                            LabeledContent("检测到 easytier-core") {
-                                Text(detectedCore)
-                                    .foregroundColor(.secondary)
-                                    .textSelection(.enabled)
-                            }
-                        }
-
-                        if let detectedCLI = detectedCLIPath() {
-                            LabeledContent("检测到 easytier-cli") {
-                                Text(detectedCLI)
-                                    .foregroundColor(.secondary)
-                                    .textSelection(.enabled)
-                            }
-                        }
-
-                        LabeledContent("版本") {
-                            Text(detectedCoreVersion)
-                                .foregroundColor(.secondary)
-                                .textSelection(.enabled)
-                        }
+                        // 更新操作按钮
+                        updateActionSection
                     }
 
+                    // MARK: - 通用 Section
                     Section(header: Text("通用").font(.system(.subheadline, design: .rounded))) {
                         Toggle("开机启动 EasyTier", isOn: .init(
                             get: { startAtLogin },
@@ -92,6 +75,7 @@ struct SettingsView: View {
                         Toggle("启动时自动连接", isOn: $autoConnectOnLaunch)
                     }
 
+                    // MARK: - 关于 Section
                     Section(header: Text("关于").font(.system(.subheadline, design: .rounded))) {
                         LabeledContent("应用程序") {
                             Text("EasyTier GUI")
@@ -99,7 +83,7 @@ struct SettingsView: View {
                         }
 
                         LabeledContent("版本") {
-                            Text("1.0.0")
+                            Text("1.2")
                                 .foregroundColor(.secondary)
                         }
 
@@ -126,74 +110,185 @@ struct SettingsView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(NSColor.windowBackgroundColor))
         .onAppear {
-            detectCoreVersion()
-        }
-        .onChange(of: easytierPath) { _, _ in
-            detectCoreVersion()
+            Task {
+                await checkForUpdateIfNeeded()
+            }
         }
         .alert("无法保存设置", isPresented: $showVisibilityAlert) {
             Button("知道了", role: .cancel) { }
         } message: {
             Text("必须保留至少一个可见入口（系统托盘或程序坞），以确保您可以访问应用程序。")
         }
+        .confirmationDialog(
+            "确定要重置到内置版本吗？",
+            isPresented: $showResetConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("重置", role: .destructive) {
+                resetToBundledVersion()
+            }
+            Button("取消", role: .cancel) { }
+        } message: {
+            Text("这将删除已安装的更新版本，回退到应用内置的版本。")
+        }
     }
 
-    private func detectCoreVersion() {
-        let corePath: String
-        if let path = detectedBinaryPath(named: "easytier-core") {
-            corePath = path
-        } else {
-            detectedCoreVersion = "未找到 easytier-core"
-            return
+    // MARK: - Update Banner Section
+
+    @ViewBuilder
+    private var updateBannerSection: some View {
+        switch binaryManager.updateState {
+        case .updateAvailable(let version):
+            UpdateBanner(
+                version: version,
+                onUpdate: { startUpdate() },
+                onSkip: { binaryManager.skipCurrentVersion() }
+            )
+            .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
+
+        case .downloading(let progress):
+            DownloadProgressBanner(progress: progress)
+                .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
+
+        case .installed:
+            if let version = binaryManager.currentVersion {
+                UpdateCompleteBanner(
+                    version: version,
+                    onDismiss: { binaryManager.resetUpdateState() }
+                )
+                .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
+            }
+
+        case .error(let message):
+            ErrorBanner(
+                message: message,
+                onRetry: { Task { await binaryManager.checkForUpdate(force: true) } },
+                onDismiss: { binaryManager.resetUpdateState() }
+            )
+            .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
+
+        default:
+            EmptyView()
+        }
+    }
+
+    // MARK: - Version Info Section
+
+    @ViewBuilder
+    private var versionInfoSection: some View {
+        // 当前版本
+        LabeledContent("当前版本") {
+            HStack(spacing: 6) {
+                if let version = binaryManager.currentVersion {
+                    Text("v\(version)")
+                        .foregroundColor(.primary)
+
+                    // 版本来源标签
+                    let source = binaryManager.binarySource(for: .core)
+                    Text(source == .installed ? "已安装" : "内置")
+                        .font(.caption2)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(source == .installed ? Color.blue.opacity(0.1) : Color.gray.opacity(0.1))
+                        .foregroundColor(source == .installed ? .blue : .secondary)
+                        .cornerRadius(4)
+                } else {
+                    Text("未安装")
+                        .foregroundColor(.secondary)
+                }
+            }
         }
 
-        DispatchQueue.global(qos: .utility).async {
-            let task = Process()
-            task.executableURL = URL(fileURLWithPath: corePath)
-            task.arguments = ["-V"]
-            let pipe = Pipe()
-            task.standardOutput = pipe
-            task.standardError = pipe
-            do {
-                try task.run()
-                task.waitUntilExit()
-                let data = pipe.fileHandleForReading.readDataToEndOfFile()
-                let output = (String(data: data, encoding: .utf8) ?? "")
-                    .trimmingCharacters(in: .whitespacesAndNewlines)
-                DispatchQueue.main.async {
-                    detectedCoreVersion = output.isEmpty ? "未知" : output
+        // 最新版本
+        if let latest = binaryManager.latestVersion {
+            LabeledContent("最新版本") {
+                Text(latest.displayVersion)
+                    .foregroundColor(binaryManager.updateState.isUpdateAvailable ? .blue : .secondary)
+            }
+        }
+
+        // 上次检查时间
+        if let lastCheck = UserDefaults.standard.object(forKey: "easytierLastUpdateCheck") as? Date {
+            LabeledContent("上次检查") {
+                Text(lastCheck, style: .relative)
+                    .foregroundColor(.secondary)
+            }
+        }
+    }
+
+    // MARK: - Update Action Section
+
+    @ViewBuilder
+    private var updateActionSection: some View {
+        HStack(spacing: 12) {
+            // 检查更新按钮
+            Button {
+                Task {
+                    await binaryManager.checkForUpdate(force: true)
                 }
-            } catch {
-                DispatchQueue.main.async {
-                    detectedCoreVersion = "检测失败"
+            } label: {
+                if binaryManager.isCheckingForUpdate {
+                    ProgressView()
+                        .scaleEffect(0.7)
+                        .frame(width: 16, height: 16)
+                } else {
+                    Text("检查更新")
+                }
+            }
+            .disabled(binaryManager.isCheckingForUpdate || isUpdating)
+
+            // 重置按钮（仅当有用户安装版本时显示）
+            if binaryManager.binarySource(for: .core) == .installed {
+                Button("重置到内置版本") {
+                    showResetConfirmation = true
                 }
             }
         }
     }
 
-    // MARK: - File Picker
+    // MARK: - Computed Properties
 
-    private func showDirectoryPicker() {
-        let panel = NSOpenPanel()
-        panel.allowsMultipleSelection = false
-        panel.canChooseFiles = false
-        panel.canChooseDirectories = true
-        panel.message = "请选择包含 easytier-core 和 easytier-cli 的目录"
-        panel.directoryURL = URL(fileURLWithPath: easytierPath)
+    private var isUpdating: Bool {
+        if case .downloading = binaryManager.updateState { return true }
+        return false
+    }
 
-        if panel.runModal() == .OK, let url = panel.url {
-            easytierPath = url.path
+    // MARK: - Actions
+
+    private func checkForUpdateIfNeeded() async {
+        // 检查是否需要自动检查（启动后 2 秒，且超过 24 小时未检查）
+        guard !binaryManager.isCheckingForUpdate else { return }
+
+        if let lastCheck = UserDefaults.standard.object(forKey: "easytierLastUpdateCheck") as? Date {
+            let elapsed = Date().timeIntervalSince(lastCheck)
+            if elapsed < 86400 { // 24 hours
+                return
+            }
+        }
+
+        // 延迟 2 秒后检查
+        try? await Task.sleep(nanoseconds: 2_000_000_000)
+        await binaryManager.checkForUpdate()
+    }
+
+    private func startUpdate() {
+        guard let version = binaryManager.latestVersion else { return }
+
+        Task {
+            do {
+                try await binaryManager.downloadAndInstall(version: version)
+            } catch {
+                // 错误已在 BinaryManager 中处理
+            }
         }
     }
 
-    private func detectedBinaryPath(named binaryName: String) -> String? {
-        let directoryURL = URL(fileURLWithPath: easytierPath)
-        let candidate = directoryURL.appendingPathComponent(binaryName).path
-        return FileManager.default.isExecutableFile(atPath: candidate) ? candidate : nil
-    }
-
-    private func detectedCLIPath() -> String? {
-        detectedBinaryPath(named: "easytier-cli") ?? detectedBinaryPath(named: "easytier-core-cli")
+    private func resetToBundledVersion() {
+        do {
+            try binaryManager.clearInstalledVersion()
+        } catch {
+            print("Failed to reset: \(error)")
+        }
     }
 }
 
@@ -205,7 +300,6 @@ struct OpenAtLoginManager {
     func setStartAtLogin(_ enabled: Bool) {
         #if os(macOS)
         if #available(macOS 13.0, *) {
-            // Use new API for macOS 13+
             do {
                 if enabled {
                     try SMAppService.mainApp.register()
@@ -216,7 +310,6 @@ struct OpenAtLoginManager {
                 print("Failed to set login item: \(error)")
             }
         } else {
-            // Use deprecated API for older macOS versions
             SMLoginItemSetEnabled(bundleID as CFString, enabled)
         }
         #endif
@@ -228,5 +321,5 @@ struct OpenAtLoginManager {
 #Preview {
     SettingsView()
         .environmentObject(ProcessViewModel())
-        .frame(width: 550, height: 500)
+        .frame(width: 550, height: 600)
 }
