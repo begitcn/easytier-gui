@@ -35,21 +35,38 @@ esac
 
 echo "Architecture: $ARCH ($ARCH_NAME)"
 
-# 获取最新版本信息（添加 User-Agent 避免 API 限制）
+# 获取最新版本信息（优先使用 releases/latest 重定向，避免 API 限流和 JSON 解析脆弱性）
 echo "Fetching latest release info from GitHub..."
-LATEST_RELEASE_JSON=$(curl -s -H "User-Agent: EasyTierGUI-Build/1.0" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/EasyTier/EasyTier/releases/latest 2>/dev/null || echo "")
+LATEST_VERSION=""
+LATEST_TAG_URL=$(curl -fsSL -o /dev/null -w '%{url_effective}' -A "EasyTierGUI-Build/1.0" \
+    https://github.com/EasyTier/EasyTier/releases/latest 2>/dev/null || true)
 
-# 检查 API 是否返回有效数据
-if echo "$LATEST_RELEASE_JSON" | grep -q '"tag_name"'; then
-    # 提取版本号
-    LATEST_VERSION=$(echo "$LATEST_RELEASE_JSON" | grep -m1 '"tag_name"' | sed 's/.*"tag_name": "\([^"]*\)".*/\1/')
-    echo "Latest version: $LATEST_VERSION"
-else
-    echo "Warning: GitHub API rate limited or unavailable"
-    # 使用已知稳定版本作为备用
+if [ -n "$LATEST_TAG_URL" ]; then
+    LATEST_VERSION=$(basename "$LATEST_TAG_URL")
+fi
+
+# 回退：如果重定向拿不到版本，再尝试 GitHub API
+if [ -z "$LATEST_VERSION" ]; then
+    LATEST_RELEASE_JSON=$(curl -fsSL -H "User-Agent: EasyTierGUI-Build/1.0" \
+        -H "Accept: application/vnd.github.v3+json" \
+        https://api.github.com/repos/EasyTier/EasyTier/releases/latest 2>/dev/null || true)
+    if echo "$LATEST_RELEASE_JSON" | grep -q '"tag_name"'; then
+        LATEST_VERSION=$(echo "$LATEST_RELEASE_JSON" | sed -n 's/.*"tag_name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -n1)
+    fi
+fi
+
+# 最终兜底和格式校验
+if ! echo "$LATEST_VERSION" | grep -Eq '^v?[0-9]+\.[0-9]+\.[0-9]+$'; then
+    echo "Warning: Failed to detect valid latest version from remote"
     LATEST_VERSION="v2.4.5"
     echo "Using fallback version: $LATEST_VERSION"
 fi
+
+# 统一补齐 v 前缀
+if ! echo "$LATEST_VERSION" | grep -q '^v'; then
+    LATEST_VERSION="v$LATEST_VERSION"
+fi
+echo "Latest version: $LATEST_VERSION"
 
 # 构建下载 URL
 # 文件名格式: easytier-macos-aarch64-v2.4.5.zip 或 easytier-macos-x86_64-v2.4.5.zip
