@@ -1,19 +1,32 @@
+//
+//  ConfigManager.swift
+//  EasyTierGUI
+//
+//  配置管理器 - 处理网络配置的持久化
+//
+
 import Foundation
 import Combine
 
-// MARK: - ConfigManager
-// Handles persistence of EasyTier configurations
+// MARK: - Config Manager
 
+/// 配置管理器 - 管理网络配置的增删改查和持久化
 class ConfigManager: ObservableObject {
+
+    // MARK: - Published Properties
+
     @Published var configs: [EasyTierConfig] = []
     @Published var activeConfigIndex: Int = -1
+
+    // MARK: - Private Properties
 
     private let configsDirectory: URL
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
 
+    // MARK: - Initialization
+
     init() {
-        // Store configs in ~/Library/Application Support/EasyTierGUI/
         let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
         configsDirectory = appSupport.appendingPathComponent("EasyTierGUI", isDirectory: true)
 
@@ -31,6 +44,7 @@ class ConfigManager: ObservableObject {
 
     // MARK: - CRUD Operations
 
+    /// 添加新配置
     func addConfig(_ config: EasyTierConfig) {
         var config = config
         config.listenPort = normalizedListenPort(for: config)
@@ -40,12 +54,14 @@ class ConfigManager: ObservableObject {
         saveConfigs()
     }
 
+    /// 更新配置
     func updateConfig(_ config: EasyTierConfig, at index: Int) {
         guard index < configs.count else { return }
         configs[index] = config
         saveConfigs()
     }
 
+    /// 删除配置
     func deleteConfig(at index: Int) {
         guard index < configs.count else { return }
         configs.remove(at: index)
@@ -59,12 +75,14 @@ class ConfigManager: ObservableObject {
         saveConfigs()
     }
 
+    /// 设置当前活动配置
     func setActiveConfig(at index: Int) {
         guard index < configs.count else { return }
         activeConfigIndex = index
         saveConfigs()
     }
 
+    /// 当前活动配置
     var activeConfig: EasyTierConfig? {
         get {
             guard activeConfigIndex >= 0, activeConfigIndex < configs.count else { return nil }
@@ -83,7 +101,6 @@ class ConfigManager: ObservableObject {
         let data = try? encoder.encode(configs)
         try? data?.write(to: configsDirectory.appendingPathComponent("configs.json"))
 
-        // Also save active index
         let indexData = try? JSONEncoder().encode(activeConfigIndex)
         try? indexData?.write(to: configsDirectory.appendingPathComponent("active_index.json"))
     }
@@ -94,13 +111,11 @@ class ConfigManager: ObservableObject {
            let loaded = try? decoder.decode([EasyTierConfig].self, from: data) {
             configs = loaded
         } else {
-            // Create a default config
             configs = [EasyTierConfig(name: "Default")]
         }
 
         normalizeConfigs()
 
-        // Load active index
         let indexURL = configsDirectory.appendingPathComponent("active_index.json")
         if let data = try? Data(contentsOf: indexURL),
            let index = try? JSONDecoder().decode(Int.self, from: data),
@@ -113,92 +128,33 @@ class ConfigManager: ObservableObject {
 
     // MARK: - Import/Export
 
+    /// 导出单个配置
     func exportConfig(_ config: EasyTierConfig, to url: URL) throws {
         let data = try encoder.encode(config)
         try data.write(to: url)
     }
 
+    /// 导入配置
     func importConfig(from url: URL) throws -> EasyTierConfig {
         let data = try Data(contentsOf: url)
         return try decoder.decode(EasyTierConfig.self, from: data)
     }
 
-    /// Export all configurations to a single JSON file
+    /// 导出所有配置
     func exportAllConfigs(to url: URL) throws {
         let data = try encoder.encode(configs)
         try data.write(to: url)
     }
 
-    /// Import multiple configurations from a JSON file
+    /// 导入多个配置
     func importConfigs(from url: URL) throws -> [EasyTierConfig] {
         let data = try Data(contentsOf: url)
         return try decoder.decode([EasyTierConfig].self, from: data)
     }
 
-    // MARK: - Generate Config JSON for easytier CLI
+    // MARK: - Port Normalization
 
-    func generateCLIBuildArguments(config: EasyTierConfig) -> [String] {
-        var arguments: [String] = []
-
-        // Basic settings
-        if !config.networkName.isEmpty {
-            arguments.append(contentsOf: ["--network-name", config.networkName])
-        }
-
-        if !config.networkPassword.isEmpty {
-            arguments.append(contentsOf: ["--network-secret", config.networkPassword])
-        }
-
-        // Server URI should be added as a peer
-        if !config.serverURI.isEmpty {
-            arguments.append(contentsOf: ["--peers", config.serverURI])
-        }
-
-        if !config.hostname.isEmpty {
-            arguments.append(contentsOf: ["--hostname", config.hostname])
-        }
-
-        // Only add --ipv4 if not using DHCP and ipv4 is not empty
-        if !config.useDHCP && !config.tunConfig.ipv4.isEmpty {
-            arguments.append(contentsOf: ["--ipv4", config.tunConfig.ipv4])
-        }
-
-        arguments.append(contentsOf: ["--rpc-portal", "127.0.0.1:\(config.rpcPortalPort)"])
-        arguments.append(contentsOf: ["--listeners", "tcp://0.0.0.0:\(config.listenPort)"])
-        arguments.append(contentsOf: ["--instance-name", "etgui-\(config.id.uuidString.prefix(8))"])
-
-        // Add additional peers
-        for peer in config.peers {
-            arguments.append(contentsOf: ["--peers", peer])
-        }
-
-        // Advanced settings
-        if config.enableLatencyFirst {
-            arguments.append("--latency-first")
-        }
-
-        arguments.append(contentsOf: ["--private-mode", config.enablePrivateMode ? "true" : "false"])
-
-        arguments.append(contentsOf: ["--accept-dns", config.enableMagicDNS ? "true" : "false"])
-
-        if config.enableMultiThread {
-            arguments.append("--multi-thread")
-        }
-
-        if config.enableKCP {
-            arguments.append("--enable-kcp-proxy")
-        }
-
-        // Add --dhcp flag when using DHCP mode
-        if config.useDHCP {
-            arguments.append("--dhcp")
-        }
-
-        // No --log-level parameter - EasyTier doesn't support it
-
-        return arguments
-    }
-
+    /// 规范化所有配置的端口
     private func normalizeConfigs() {
         var usedListenPorts = Set<Int>()
         var usedRPCPorts = Set<Int>()
@@ -234,9 +190,7 @@ class ConfigManager: ObservableObject {
 
     private func firstAvailablePort(preferred: Int, fallbackStart: Int, used: inout Set<Int>) -> Int {
         var candidate = preferred > 0 ? preferred : fallbackStart
-        if candidate < 1 {
-            candidate = fallbackStart
-        }
+        if candidate < 1 { candidate = fallbackStart }
 
         while used.contains(candidate) {
             candidate += 1

@@ -1,12 +1,22 @@
+//
+//  Models.swift
+//  EasyTierGUI
+//
+//  数据模型定义
+//
+
 import Foundation
 import SwiftUI
 
 // MARK: - Network Status
+
+/// 网络连接状态
 enum NetworkStatus: String, Identifiable {
     case disconnected, connecting, connected, error
 
     var id: String { rawValue }
 
+    /// 状态指示颜色
     var color: Color {
         switch self {
         case .disconnected: return .gray
@@ -16,6 +26,7 @@ enum NetworkStatus: String, Identifiable {
         }
     }
 
+    /// 状态描述文本
     var description: String {
         switch self {
         case .disconnected: return "未连接"
@@ -26,38 +37,54 @@ enum NetworkStatus: String, Identifiable {
     }
 }
 
-// MARK: - Config Model
+// MARK: - EasyTier Configuration
+
+/// EasyTier 网络配置
 struct EasyTierConfig: Codable, Identifiable, Equatable {
     var id: UUID
     var name: String
 
-    // Basic Settings
-    var networkName: String
-    var networkPassword: String
-    var serverURI: String
+    // MARK: - 基础设置
+    var networkName: String      // 网络名称 (组网标识)
+    var networkPassword: String  // 网络密码 (组网密钥)
+    var serverURI: String        // 服务器地址 (对端节点)
 
-    // Advanced Settings
-    var hostname: String
-    var enableLatencyFirst: Bool    // 延迟优先模式
-    var enablePrivateMode: Bool      // 私有模式
-    var enableMagicDNS: Bool         // 魔法DNS
-    var enableMultiThread: Bool      // 多线程
-    var enableKCP: Bool              // KCP代理
+    // MARK: - 高级设置
+    var hostname: String              // 主机名
+    var enableLatencyFirst: Bool      // 延迟优先模式
+    var enablePrivateMode: Bool       // 私有模式
+    var enableMagicDNS: Bool          // 魔法 DNS
+    var enableMultiThread: Bool       // 多线程
+    var enableKCP: Bool               // KCP 代理
 
-    // Legacy settings
-    var listenPort: Int
-    var rpcPortalPort: Int
-    var peers: [String]
-    var tunConfig: TunConfig
-    var useDHCP: Bool  // true = DHCP, false = 静态IP
-    var logLevel: String
+    // MARK: - 网络设置
+    var listenPort: Int        // 监听端口
+    var rpcPortalPort: Int     // RPC 管理端口
+    var peers: [String]        // 额外节点列表
+    var tunConfig: TunConfig   // TUN 设备配置
+    var useDHCP: Bool          // 使用 DHCP (否则静态 IP)
+    var logLevel: String       // 日志级别
 
-    init(name: String = "Default", networkName: String = "", networkPassword: String = "",
-         serverURI: String = "", hostname: String = "",
-         enableLatencyFirst: Bool = false, enablePrivateMode: Bool = false,
-         enableMagicDNS: Bool = false, enableMultiThread: Bool = false, enableKCP: Bool = false,
-         listenPort: Int = 11010, rpcPortalPort: Int = 15888, peers: [String] = [], tunConfig: TunConfig? = nil,
-         useDHCP: Bool = true, logLevel: String = "info") {
+    // MARK: - Initialization
+
+    init(
+        name: String = "Default",
+        networkName: String = "",
+        networkPassword: String = "",
+        serverURI: String = "",
+        hostname: String = "",
+        enableLatencyFirst: Bool = false,
+        enablePrivateMode: Bool = false,
+        enableMagicDNS: Bool = false,
+        enableMultiThread: Bool = false,
+        enableKCP: Bool = false,
+        listenPort: Int = 11010,
+        rpcPortalPort: Int = 15888,
+        peers: [String] = [],
+        tunConfig: TunConfig? = nil,
+        useDHCP: Bool = true,
+        logLevel: String = "info"
+    ) {
         self.id = UUID()
         self.name = name
         self.networkName = networkName
@@ -77,24 +104,13 @@ struct EasyTierConfig: Codable, Identifiable, Equatable {
         self.logLevel = logLevel
     }
 
+    // MARK: - Codable (向后兼容)
+
     enum CodingKeys: String, CodingKey {
-        case id
-        case name
-        case networkName
-        case networkPassword
-        case serverURI
-        case hostname
-        case enableLatencyFirst
-        case enablePrivateMode
-        case enableMagicDNS
-        case enableMultiThread
-        case enableKCP
-        case listenPort
-        case rpcPortalPort
-        case peers
-        case tunConfig
-        case useDHCP
-        case logLevel
+        case id, name, networkName, networkPassword, serverURI, hostname
+        case enableLatencyFirst, enablePrivateMode, enableMagicDNS
+        case enableMultiThread, enableKCP
+        case listenPort, rpcPortalPort, peers, tunConfig, useDHCP, logLevel
     }
 
     init(from decoder: Decoder) throws {
@@ -119,10 +135,13 @@ struct EasyTierConfig: Codable, Identifiable, Equatable {
     }
 }
 
+// MARK: - TUN Configuration
+
+/// TUN 设备配置
 struct TunConfig: Codable, Equatable {
-    var ipv4: String
-    var netmask: String
-    var mtu: Int
+    var ipv4: String      // IPv4 地址
+    var netmask: String   // 子网掩码
+    var mtu: Int          // MTU 大小
 
     init(ipv4: String = "", netmask: String = "255.255.255.0", mtu: Int = 1420) {
         self.ipv4 = ipv4
@@ -132,29 +151,35 @@ struct TunConfig: Codable, Equatable {
 }
 
 // MARK: - Peer Info
+
+/// 网络节点信息
 struct PeerInfo: Identifiable, Equatable {
     var id = UUID()
-    var nodeID: String
-    var ipv4: String
-    var hostname: String
-    var status: PeerStatus
-    var latencyMs: Double?
-    var cost: String?
-    var tunnelProto: String?
-    var location: String?
+    var nodeID: String        // 节点 ID
+    var ipv4: String          // IPv4 地址
+    var hostname: String      // 主机名
+    var status: PeerStatus    // 在线状态
+    var latencyMs: Double?    // 延迟 (毫秒)
+    var cost: String?         // 连接方式
+    var tunnelProto: String?  // 隧道协议
+    var location: String?     // 地理位置
 
+    /// 节点在线状态
     enum PeerStatus: String, Equatable {
         case online, offline, connecting
     }
 }
 
 // MARK: - Log Entry
+
+/// 日志条目
 struct LogEntry: Identifiable {
     var id = UUID()
-    var timestamp: Date
-    var level: String
-    var message: String
+    var timestamp: Date   // 时间戳
+    var level: String     // 日志级别
+    var message: String   // 日志内容
 
+    /// 日志级别颜色
     var levelColor: Color {
         switch level.lowercased() {
         case "error", "err": return .red

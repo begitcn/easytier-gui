@@ -1,156 +1,106 @@
 # EasyTier GUI
 
-一个用于 EasyTier 的 macOS 图形界面应用程序。
+[![Platform](https://img.shields.io/badge/platform-macOS%20(Intel%20%7C%20Apple%20Silicon)-lightgrey)](https://www.apple.com/macos)
+[![Swift](https://img.shields.io/badge/Swift-5.9-orange)](https://swift.org)
+[![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
-![Platform](https://img.shields.io/badge/platform-macOS-lightgrey)
-![Swift](https://img.shields.io/badge/Swift-5.9-orange)
-![License](https://img.shields.io/badge/license-MIT-blue)
-
-## ⚠️ 重要说明
-
-**EasyTier 需要 root 权限才能创建 TUN 网络设备。**
-
-请使用以下方式之一运行应用：
-
-### 快速开始
-
-#### 方式 1: 使用启动脚本（推荐）
-
-```bash
-cd /path/to/easytier-gui
-./launch-easytier-gui.sh
-```
-
-#### 方式 2: 直接运行
-
-```bash
-sudo /Applications/EasyTierGUI.app/Contents/MacOS/EasyTierGUI
-```
-
-#### 方式 3: 从 Xcode 运行
-
-```bash
-# 在 Xcode 中，Product > Scheme > Edit Scheme
-# 在 "Run" 选项卡中，勾选 "Debug executable"
-# 然后在终端中运行：
-sudo /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild -project EasyTierGUI.xcodeproj -scheme EasyTierGUI
-```
+一个用于 [EasyTier](https://github.com/EasyTier/EasyTier) 的 macOS 原生图形界面应用程序。
 
 ## 功能特性
 
-✅ **完整的 EasyTier 配置支持**
-- 基础设置：网络名称、密码、服务器地址
-- 高级设置：主机名、延迟优先、私有模式、DNS配置、多线程、KCP代理
-- TUN 设备：DHCP 或静态 IP 配置
-- 节点管理：添加/删除多个对等节点
-
-✅ **用户友好的界面**
-- 状态指示器：实时显示连接状态
-- 日志查看：完整的日志输出
-- 节点列表：查看已连接的节点
-
-✅ **配置管理**
-- 多配置支持：保存和管理多个网络配置
-- 配置导入/导出：方便配置分享
+- 🖥️ **原生 macOS 体验** - 使用 SwiftUI 构建，支持 Intel 和 Apple Silicon
+- 🔧 **完整配置支持** - 网络名称、密码、服务器地址、主机名等
+- ⚡ **高级选项** - 延迟优先模式、私有模式、DNS 配置、多线程、KCP 代理
+- 📋 **多配置管理** - 保存、导入、导出多个网络配置
+- 👥 **节点监控** - 实时查看已连接节点和延迟信息
+- 📝 **日志查看** - 带过滤和搜索的实时日志
 
 ## 系统要求
 
 - macOS 14.0+
-- Apple Silicon (M1/M2/M3/M4) 原生支持，无需 Rosetta
-- Xcode 15.0+ (用于编译)
-- EasyTier Core 可执行文件
+- [EasyTier](https://github.com/EasyTier/EasyTier/releases) 可执行文件
 
-## 编译与打包
+## 安装
+
+### 从 DMG 安装
+
+1. 下载 `EasyTierGUI.dmg`
+2. 打开 DMG，将应用拖入 Applications 文件夹
+3. 从终端运行（首次需要 root 权限）：
+   ```bash
+   sudo /Applications/EasyTierGUI.app/Contents/MacOS/EasyTierGUI
+   ```
 
 ### 从源码编译
 
 ```bash
-git clone https://github.com/your-repo/easytier-gui.git
+# 克隆仓库
+git clone https://github.com/your-username/easytier-gui.git
 cd easytier-gui
 
-# 编译应用 (arm64 原生)
+# 构建
 ./build.sh
 
-# 运行应用
+# 运行
 ./launch-easytier-gui.sh
 ```
 
-### 打包 DMG 安装包
-
-```bash
-# 简单打包
-./create-dmg.sh
-
-# 专业打包（自定义背景、窗口布局）
-./create-dmg-pro.sh
-```
-
-编译产物位置：
-- 应用：`.build/DerivedData/Build/Products/Release/EasyTierGUI.app`
-- 安装包：`EasyTierGUI.dmg`
-
 ## 使用说明
 
-详细的使用说明请参考 [RUN-WITH-SUDO.md](./RUN-WITH-SUDO.md)。
+### 快速开始
 
-### 快速配置
+1. **下载 EasyTier** - 从 [Releases](https://github.com/EasyTier/EasyTier/releases) 下载 `easytier-core` 和 `easytier-cli`
+2. **配置路径** - 在设置中指定 EasyTier 可执行文件目录
+3. **创建网络** - 填写网络名称和密码
+4. **连接** - 点击连接按钮
 
-1. **基础设置**
-   - 网络名称：填写组网名称
-   - 网络密码：填写组网密码
-   - 服务器地址：填写对端节点地址（可选）
+### 配置说明
 
-2. **IP 配置**
-   - 使用 DHCP：自动获取虚拟 IP（推荐）
-   - 静态 IP：手动指定 IP 和掩码（如：192.168.55.13/24）
-
-3. **高级设置**（可选）
-   - 主机名：自定义主机名
-   - 延迟优先：优先选择低延迟路径
-   - 私有模式：启用私有网络
-   - DNS 配置：接受对端 DNS
-   - 多线程：启用多线程处理
-   - KCP 代理：启用 KCP 协议
-
-4. **启动连接**
-   - 点击"连接"按钮
-   - 查看"节点"标签页了解连接状态
-   - 查看"日志"标签页了解详细日志
-
-## 配置文件
-
-配置文件保存在：
-```
-~/Library/Application Support/EasyTierGUI/configs.json
-```
+| 字段 | 说明 | 必填 |
+|------|------|------|
+| 网络名称 | 组网标识符 | ✅ |
+| 网络密码 | 组网密钥 | ✅ |
+| 服务器地址 | 对端节点地址 (如 `tcp://1.2.3.4:11010`) | ✅ |
+| 主机名 | 本机显示名称 | ❌ |
+| DHCP | 自动分配虚拟 IP (推荐) | ❌ |
+| 静态 IP | 手动指定虚拟 IP | ❌ |
 
 ## 故障排除
 
-### 问题：安装 DMG 后提示安装 Rosetta
+### TUN device error: Operation not permitted
 
-**原因**：此问题已在最新版本修复。应用现已配置为 arm64 原生构建。
+EasyTier 需要 root 权限创建 TUN 网络设备。解决方法：
 
-如仍遇到此问题，请确保：
-1. 使用最新的源码重新编译
-2. 运行 `./build.sh` 重新打包
+```bash
+# 方法 1: 使用启动脚本
+./launch-easytier-gui.sh
 
-### 问题：TUN device error: Operation not permitted
+# 方法 2: 直接以 root 运行
+sudo /Applications/EasyTierGUI.app/Contents/MacOS/EasyTierGUI
+```
 
-**解决方案**：确保使用 `sudo` 运行应用。
+### 找不到 easytier-core
 
-### 问题：找不到 easytier-core
-
-**解决方案**：
 1. 从 [EasyTier Releases](https://github.com/EasyTier/EasyTier/releases) 下载
-2. 在设置中选择正确的可执行文件路径
+2. 放置在 `/usr/local/bin` 或 `/opt/homebrew/bin`
+3. 或在设置中指定自定义路径
 
-### 问题：连接失败
+### 连接失败
 
-**检查项**：
-1. 网络名称和密码是否正确
-2. 服务器地址是否可达
-3. 防火墙是否允许连接
-4. 查看日志了解详细错误
+1. 检查网络名称和密码是否正确
+2. 确认服务器地址格式正确 (如 `tcp://ip:port`)
+3. 检查防火墙设置
+4. 查看日志获取详细错误信息
+
+## 构建与打包
+
+```bash
+# 构建 Universal Binary (Intel + Apple Silicon)
+./build.sh
+
+# 打包 DMG
+./create-dmg.sh
+```
 
 ## 技术栈
 
@@ -159,18 +109,15 @@ cd easytier-gui
 - **架构**: MVVM
 - **最低版本**: macOS 14.0
 
-## 贡献
-
-欢迎提交 Issue 和 Pull Request！
-
 ## 许可证
 
-MIT License
+[MIT License](LICENSE)
 
 ## 致谢
 
 - [EasyTier](https://github.com/EasyTier/EasyTier) - 强大的 P2P 组网工具
+- [Claude (Anthropic)](https://www.anthropic.com/claude) - AI 辅助开发
 
-## 联系方式
+---
 
-如有问题或建议，请提交 Issue。
+> 本项目由 Claude AI 辅助开发完成

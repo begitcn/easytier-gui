@@ -1,7 +1,18 @@
+//
+//  EasyTierService.swift
+//  EasyTierGUI
+//
+//  EasyTier 进程管理服务
+//  负责 easytier-core 进程的生命周期管理和输出解析
+//
+
 import Foundation
 import Combine
 import Darwin
 
+// MARK: - Privileged Session Manager
+
+/// 权限会话管理器 - 处理管理员权限
 final class PrivilegedSessionManager {
     static let shared = PrivilegedSessionManager()
 
@@ -16,6 +27,8 @@ final class PrivilegedSessionManager {
 }
 
 // MARK: - Errors
+
+/// EasyTier 错误类型
 enum EasyTierError: LocalizedError {
     case executableNotFound(String)
     case executableNotExecutable(String)
@@ -33,158 +46,211 @@ enum EasyTierError: LocalizedError {
     }
 }
 
-// MARK: - EasyTierService
-// Manages the easytier CLI process lifecycle
+// MARK: - EasyTier Service
 
+/// EasyTier 服务 - 管理 easytier-core 进程
 class EasyTierService: ObservableObject {
+
+    // MARK: - Published Properties
+
     @Published var isRunning = false
     @Published var processOutput = ""
     @Published var logEntries: [LogEntry] = []
 
-    // Memory management constants
-    private let maxOutputLength = 50_000  // ~50KB max for process output (reduced)
-    private let maxLogEntries = 100  // Keep only last 100 log entries
+    // MARK: - Memory Management
+
+    private let maxOutputLength = 50_000  // 最大输出缓冲 (约 50KB)
+    private let maxLogEntries = 100       // 最大日志条数
+
+    // MARK: - Private Properties
 
     private var process: Process?
     private var outputPipe: Pipe?
-    private var outputObserver: AnyCancellable?
     private var logFileHandle: FileHandle?
     private var privilegedLogTimer: Timer?
     private var privilegedLogOffset: UInt64 = 0
     private var privilegedPID: Int32?
 
-    // Read executable path from UserDefaults (set by SettingsView)
+    /// 配置的可执行文件路径
     var configuredPath: String {
         UserDefaults.standard.string(forKey: "easytierPath") ?? "/usr/local/bin"
     }
 
+    /// 解析后的可执行文件路径
     var executablePath: String {
         resolvedBinaryPath(for: ["easytier-core", "easytier"])
     }
-    var configPath: String = ""
 
     // MARK: - Process Control
 
+    /// 启动 EasyTier 进程
     func start(config: EasyTierConfig) async throws {
         if isRunning {
             try await stop()
         }
 
-        // Verify executable exists
+        // 验证可执行文件
         let fileManager = FileManager.default
         guard fileManager.fileExists(atPath: executablePath) else {
             throw EasyTierError.executableNotFound(executablePath)
         }
-
-        // Verify executable has execute permission
         guard fileManager.isExecutableFile(atPath: executablePath) else {
             throw EasyTierError.executableNotExecutable(executablePath)
         }
 
         appendOutput("[INFO] 启动 EasyTier: \(executablePath)\n")
 
+        // 非 root 用户使用特权模式启动
         if getuid() != 0 {
             try startPrivileged(config: config)
             return
         }
 
+        // 直接启动进程 (已具有 root 权限)
         let process = Process()
         process.executableURL = URL(fileURLWithPath: executablePath)
         process.arguments = buildArguments(from: config)
 
-        // Setup output capture
         let pipe = Pipe()
         outputPipe = pipe
         process.standardOutput = pipe
         process.standardError = pipe
 
-        // Launch first, then set up async reading
         try process.run()
         self.process = process
         publishRunning(true)
 
-        // Capture output asynchronously using modern FileHandle API
-        let outHandle = pipe.fileHandleForReading
-        startAsyncRead(handle: outHandle)
+        startAsyncRead(handle: pipe.fileHandleForReading)
     }
 
+    /// 停止 EasyTier 进程
+    func stop() async throws {
+        // 清理输出管道
+        outputPipe?.fileHandleForReading.readabilityHandler = nil
+        outputPipe = nil
+
+        // 停止特权进程
+        if getuid() != 0, process == nil {
+            try stopPrivileged()
+            privilegedPID = nil
+            stopPrivilegedLogPolling()
+            publishRunning(false)
+            return
+        }
+
+        // 停止普通进程
+        guard let process = process, process.isRunning else {
+            self.process = nil
+            publishRunning(false)
+            return
+        }
+
+        process.interrupt()
+        try await Task.sleep(nanoseconds: 500_000_000) // 等待 0.5s
+
+        if process.isRunning {
+            process.terminate()
+        }
+
+        self.process = nil
+        privilegedPID = nil
+        stopPrivilegedLogPolling()
+        publishRunning(false)
+    }
+
+    /// 强制停止进程
+    func forceStop() {
+        outputPipe?.fileHandleForReading.readabilityHandler = nil
+        outputPipe = nil
+
+        process?.terminate()
+
+        if privilegedPID != nil || getuid() != 0 {
+            try? stopPrivileged()
+        }
+
+        process = nil
+        privilegedPID = nil
+        stopPrivilegedLogPolling()
+        publishRunning(false)
+    }
+
+    // MARK: - Argument Building
+
+    /// 构建命令行参数
     private func buildArguments(from config: EasyTierConfig) -> [String] {
-        var arguments: [String] = []
+        var args: [String] = []
 
+        // 基础参数
         if !config.networkName.isEmpty {
-            arguments.append(contentsOf: ["--network-name", config.networkName])
+            args.append(contentsOf: ["--network-name", config.networkName])
         }
-
         if !config.networkPassword.isEmpty {
-            arguments.append(contentsOf: ["--network-secret", config.networkPassword])
+            args.append(contentsOf: ["--network-secret", config.networkPassword])
         }
-
         if !config.serverURI.isEmpty {
-            arguments.append(contentsOf: ["--peers", config.serverURI])
+            args.append(contentsOf: ["--peers", config.serverURI])
         }
-
         if !config.hostname.isEmpty {
-            arguments.append(contentsOf: ["--hostname", config.hostname])
+            args.append(contentsOf: ["--hostname", config.hostname])
         }
 
+        // IP 配置
         if !config.useDHCP && !config.tunConfig.ipv4.isEmpty {
-            arguments.append(contentsOf: ["--ipv4", config.tunConfig.ipv4])
+            args.append(contentsOf: ["--ipv4", config.tunConfig.ipv4])
         }
 
-        arguments.append(contentsOf: ["--rpc-portal", "127.0.0.1:\(config.rpcPortalPort)"])
-        arguments.append(contentsOf: ["--listeners", "tcp://0.0.0.0:\(config.listenPort)"])
-        arguments.append(contentsOf: ["--instance-name", "etgui-\(config.id.uuidString.prefix(8))"])
+        // 端口配置
+        args.append(contentsOf: ["--rpc-portal", "127.0.0.1:\(config.rpcPortalPort)"])
+        args.append(contentsOf: ["--listeners", "tcp://0.0.0.0:\(config.listenPort)"])
+        args.append(contentsOf: ["--instance-name", "etgui-\(config.id.uuidString.prefix(8))"])
 
+        // 额外节点
         for peer in config.peers {
-            arguments.append(contentsOf: ["--peers", peer])
+            args.append(contentsOf: ["--peers", peer])
         }
 
-        if config.enableLatencyFirst {
-            arguments.append("--latency-first")
-        }
+        // 高级选项
+        if config.enableLatencyFirst { args.append("--latency-first") }
+        args.append(contentsOf: ["--private-mode", config.enablePrivateMode ? "true" : "false"])
+        args.append(contentsOf: ["--accept-dns", config.enableMagicDNS ? "true" : "false"])
+        if config.enableMultiThread { args.append("--multi-thread") }
+        if config.enableKCP { args.append("--enable-kcp-proxy") }
+        if config.useDHCP { args.append("--dhcp") }
 
-        arguments.append(contentsOf: ["--private-mode", config.enablePrivateMode ? "true" : "false"])
-        arguments.append(contentsOf: ["--accept-dns", config.enableMagicDNS ? "true" : "false"])
-
-        if config.enableMultiThread {
-            arguments.append("--multi-thread")
-        }
-
-        if config.enableKCP {
-            arguments.append("--enable-kcp-proxy")
-        }
-
-        if config.useDHCP {
-            arguments.append("--dhcp")
-        }
-
-        return arguments
+        return args
     }
 
+    // MARK: - Privileged Execution
+
+    /// 以特权模式启动进程
     private func startPrivileged(config: EasyTierConfig) throws {
-        let logURL = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("easytier_gui_elevated.log")
+        let logURL = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("easytier_gui_elevated.log")
+
         if !FileManager.default.fileExists(atPath: logURL.path) {
             FileManager.default.createFile(atPath: logURL.path, contents: Data())
         }
         privilegedLogOffset = (try? FileManager.default.attributesOfItem(atPath: logURL.path)[.size] as? UInt64) ?? 0
 
-        let command = ([executablePath] + buildArguments(from: config)).map(shellQuote).joined(separator: " ")
-        let output = try PrivilegedSessionManager.shared.run(command: "\(command) >> \(shellQuote(logURL.path)) 2>&1 & echo $!")
+        let command = ([executablePath] + buildArguments(from: config))
+            .map(shellQuote).joined(separator: " ")
+        let output = try PrivilegedSessionManager.shared.run(
+            command: "\(command) >> \(shellQuote(logURL.path)) 2>&1 & echo $!"
+        )
 
         guard let pid = Int32(output.trimmingCharacters(in: .whitespacesAndNewlines)) else {
-            throw NSError(domain: "EasyTierGUI", code: 5, userInfo: [NSLocalizedDescriptionKey: output.isEmpty ? "无法以管理员权限启动 easytier" : output])
+            throw NSError(domain: "EasyTierGUI", code: 5,
+                userInfo: [NSLocalizedDescriptionKey: output.isEmpty ? "无法以管理员权限启动 easytier" : output])
         }
 
         Thread.sleep(forTimeInterval: 0.5)
         if kill(pid, 0) != 0 && errno != EPERM {
             let logText = try? String(contentsOf: logURL, encoding: .utf8)
-            let recentLog = logText?
-                .components(separatedBy: .newlines)
-                .suffix(20)
-                .joined(separator: "\n")
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-            let errorMessage = (recentLog?.isEmpty == false) ? recentLog! : "easytier-core 启动后立即退出"
-            throw NSError(domain: "EasyTierGUI", code: 6, userInfo: [NSLocalizedDescriptionKey: errorMessage])
+            let recentLog = logText?.components(separatedBy: .newlines).suffix(20)
+                .joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
+            throw NSError(domain: "EasyTierGUI", code: 6,
+                userInfo: [NSLocalizedDescriptionKey: (recentLog?.isEmpty == false) ? recentLog! : "easytier-core 启动后立即退出"])
         }
 
         process = nil
@@ -193,6 +259,28 @@ class EasyTierService: ObservableObject {
         publishRunning(true)
     }
 
+    /// 停止特权进程
+    private func stopPrivileged() throws {
+        let executableName = URL(fileURLWithPath: executablePath).lastPathComponent
+        var commands: [String] = []
+
+        if let pid = privilegedPID {
+            commands.append("kill -TERM \(pid) >/dev/null 2>&1 || true")
+            commands.append("sleep 1")
+            commands.append("kill -0 \(pid) >/dev/null 2>&1 && kill -KILL \(pid) >/dev/null 2>&1 || true")
+        }
+
+        commands.append("pkill -x \(shellQuote(executableName)) >/dev/null 2>&1 || true")
+        commands.append("pkill -f \(shellQuote(executablePath)) >/dev/null 2>&1 || true")
+        commands.append("echo stopped")
+
+        let output = try PrivilegedSessionManager.shared.run(command: commands.joined(separator: "; "), timeout: 5)
+        if !output.isEmpty { appendOutput(output + "\n") }
+    }
+
+    // MARK: - Output Handling
+
+    /// 启动异步读取
     private func startAsyncRead(handle: FileHandle) {
         handle.readabilityHandler = { [weak self] currentHandle in
             guard let self = self else {
@@ -213,121 +301,40 @@ class EasyTierService: ObservableObject {
         }
     }
 
-    func stop() async throws {
-        // Clean up output pipe handler first
-        outputPipe?.fileHandleForReading.readabilityHandler = nil
-        outputPipe = nil
-
-        if getuid() != 0, process == nil {
-            try stopPrivileged()
-            privilegedPID = nil
-            stopPrivilegedLogPolling()
-            publishRunning(false)
-            return
-        }
-
-        guard let process = process, process.isRunning else {
-            self.process = nil
-            publishRunning(false)
-            return
-        }
-
-        process.interrupt()
-        // Give it a moment to gracefully terminate
-        try await Task.sleep(nanoseconds: 500_000_000) // 0.5s
-        if process.isRunning {
-            process.terminate()
-        }
-
-        self.process = nil
-        self.privilegedPID = nil
-        stopPrivilegedLogPolling()
-        publishRunning(false)
-    }
-
-    func forceStop() {
-        // Clean up output pipe handler first
-        outputPipe?.fileHandleForReading.readabilityHandler = nil
-        outputPipe = nil
-
-        if let process = process {
-            process.terminate()
-        }
-
-        if privilegedPID != nil || getuid() != 0 {
-            try? stopPrivileged()
-        }
-
-        self.process = nil
-        self.privilegedPID = nil
-        stopPrivilegedLogPolling()
-        publishRunning(false)
-    }
-
-    private func stopPrivileged() throws {
-        let executableName = URL(fileURLWithPath: executablePath).lastPathComponent
-        var commands: [String] = []
-
-        if let pid = privilegedPID {
-            commands.append("kill -TERM \(pid) >/dev/null 2>&1 || true")
-            commands.append("sleep 1")
-            commands.append("kill -0 \(pid) >/dev/null 2>&1 && kill -KILL \(pid) >/dev/null 2>&1 || true")
-        }
-
-        commands.append("pkill -x \(shellQuote(executableName)) >/dev/null 2>&1 || true")
-        commands.append("pkill -f \(shellQuote(executablePath)) >/dev/null 2>&1 || true")
-        commands.append("echo stopped")
-
-        let output = try PrivilegedSessionManager.shared.run(command: commands.joined(separator: "; "), timeout: 5)
-        if !output.isEmpty {
-            appendOutput(output + "\n")
-        }
-    }
-
-    // MARK: - Log Parsing
-
+    /// 解析日志条目
     private func parseLogEntries(_ text: String) {
         let lines = text.components(separatedBy: .newlines)
         for line in lines where !line.trimmingCharacters(in: .whitespaces).isEmpty {
-            let entry = parseLogLine(line)
-            logEntries.append(entry)
+            logEntries.append(parseLogLine(line))
         }
-
-        // Trim log entries if exceeds max
         if logEntries.count > maxLogEntries {
             logEntries.removeFirst(logEntries.count - maxLogEntries)
         }
     }
 
-    private func trimProcessOutput() {
-        // Keep processOutput bounded to prevent unbounded memory growth
-        if processOutput.count > maxOutputLength {
-            let dropCount = processOutput.count - maxOutputLength
-            processOutput.removeFirst(dropCount)
-        }
-    }
-
+    /// 解析单行日志
     private func parseLogLine(_ line: String) -> LogEntry {
-        // Typical format: [2024-01-01T12:00:00Z INFO ] message
         let pattern = #"\[([\d\-T:Z]+)\s+(\w+)\]\s+(.*)"#
 
         if let regex = try? NSRegularExpression(pattern: pattern),
            let match = regex.firstMatch(in: line, range: NSRange(line.startIndex..., in: line)) {
-
             let timestampStr = (line as NSString).substring(with: match.range(at: 1))
             let level = (line as NSString).substring(with: match.range(at: 2))
             let message = (line as NSString).substring(with: match.range(at: 3))
-
-            let formatter = ISO8601DateFormatter()
-            let timestamp = formatter.date(from: timestampStr) ?? Date()
-
+            let timestamp = ISO8601DateFormatter().date(from: timestampStr) ?? Date()
             return LogEntry(timestamp: timestamp, level: level, message: message)
         }
-
-        // Fallback: treat entire line as message
         return LogEntry(timestamp: Date(), level: "INFO", message: line)
     }
 
+    /// 清理输出缓冲
+    private func trimProcessOutput() {
+        if processOutput.count > maxOutputLength {
+            processOutput.removeFirst(processOutput.count - maxOutputLength)
+        }
+    }
+
+    /// 清空日志
     func clearLogs() {
         DispatchQueue.main.async {
             self.logEntries.removeAll()
@@ -335,8 +342,9 @@ class EasyTierService: ObservableObject {
         }
     }
 
-    // MARK: - Peer Info (via API if available)
+    // MARK: - Peer Info
 
+    /// 获取节点列表
     func fetchPeers(rpcPortalPort: Int, completion: @escaping ([PeerInfo]) -> Void) {
         guard let cliPath = easytierCLIPath() else {
             completion([])
@@ -355,10 +363,8 @@ class EasyTierService: ObservableObject {
             do {
                 try task.run()
                 task.waitUntilExit()
-
                 let data = pipe.fileHandleForReading.readDataToEndOfFile()
-                let peers = self.decodePeers(from: data)
-                completion(peers)
+                completion(self.decodePeers(from: data))
             } catch {
                 completion([])
             }
@@ -371,123 +377,35 @@ class EasyTierService: ObservableObject {
     }
 
     private func decodePeers(from data: Data) -> [PeerInfo] {
-        guard let json = try? JSONSerialization.jsonObject(with: data) else {
-            return []
-        }
+        guard let json = try? JSONSerialization.jsonObject(with: data) else { return [] }
 
         let items: [[String: Any]]
         if let array = json as? [[String: Any]] {
             items = array
         } else if let object = json as? [String: Any] {
-            if let peers = object["peers"] as? [[String: Any]] {
-                items = peers
-            } else if let rows = object["rows"] as? [[String: Any]] {
-                items = rows
-            } else if let list = object["data"] as? [[String: Any]] {
-                items = list
-            } else {
-                items = []
-            }
+            items = object["peers"] as? [[String: Any]]
+                ?? object["rows"] as? [[String: Any]]
+                ?? object["data"] as? [[String: Any]]
+                ?? []
         } else {
             items = []
         }
 
         return items.map { item in
-            let nodeID = stringValue(for: "id", in: item) ?? "unknown"
-            let ipv4 = stringValue(for: "ipv4", in: item) ?? "-"
-            let hostname = stringValue(for: "hostname", in: item) ?? "未知节点"
-            let cost = stringValue(for: "cost", in: item)
-            let latencyMs = doubleValue(for: "lat_ms", in: item)
-            let tunnelProto = stringValue(for: "tunnel_proto", in: item)
-
-            return PeerInfo(
-                nodeID: nodeID,
-                ipv4: ipv4,
-                hostname: hostname,
+            PeerInfo(
+                nodeID: stringValue(for: "id", in: item) ?? "unknown",
+                ipv4: stringValue(for: "ipv4", in: item) ?? "-",
+                hostname: stringValue(for: "hostname", in: item) ?? "未知节点",
                 status: .online,
-                latencyMs: latencyMs,
-                cost: cost,
-                tunnelProto: tunnelProto,
+                latencyMs: doubleValue(for: "lat_ms", in: item),
+                cost: stringValue(for: "cost", in: item),
+                tunnelProto: stringValue(for: "tunnel_proto", in: item),
                 location: nil
             )
         }
     }
 
-    private func stringValue(for key: String, in dict: [String: Any]) -> String? {
-        if let value = dict[key] as? String {
-            let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
-            return trimmed.isEmpty || trimmed == "-" ? nil : trimmed
-        }
-        if let value = dict[key] as? NSNumber {
-            return value.stringValue
-        }
-        return nil
-    }
-
-    private func stringValue(for keys: [String], in dict: [String: Any]) -> String? {
-        for key in keys {
-            if let value = dict[key] as? String, !value.isEmpty {
-                return value
-            }
-            if let value = dict[key] as? NSNumber {
-                return value.stringValue
-            }
-        }
-        return nil
-    }
-
-    private func doubleValue(for key: String, in dict: [String: Any]) -> Double? {
-        if let value = dict[key] as? NSNumber {
-            return value.doubleValue
-        }
-        guard let text = stringValue(for: key, in: dict) else {
-            return nil
-        }
-        return Double(text)
-    }
-
-    private func boolValue(for keys: [String], in dict: [String: Any]) -> Bool? {
-        for key in keys {
-            if let value = dict[key] as? Bool {
-                return value
-            }
-            if let value = dict[key] as? String {
-                switch value.lowercased() {
-                case "true", "online", "connected", "1":
-                    return true
-                case "false", "offline", "disconnected", "0":
-                    return false
-                default:
-                    break
-                }
-            }
-            if let value = dict[key] as? NSNumber {
-                return value.boolValue
-            }
-        }
-        return nil
-    }
-
-    private func intValue(for keys: [String], in dict: [String: Any]) -> Int? {
-        for key in keys {
-            if let value = dict[key] as? Int {
-                return value
-            }
-            if let value = dict[key] as? NSNumber {
-                return value.intValue
-            }
-            if let value = dict[key] as? String, let int = Int(value) {
-                return int
-            }
-        }
-        return nil
-    }
-
-    private func shellQuote(_ s: String) -> String {
-        if s.isEmpty { return "''" }
-        let escaped = s.replacingOccurrences(of: "'", with: "'\\\\''")
-        return "'\(escaped)'"
-    }
+    // MARK: - Helpers
 
     private func resolvedBinaryPath(for names: [String]) -> String {
         let configuredURL = URL(fileURLWithPath: configuredPath)
@@ -515,14 +433,31 @@ class EasyTierService: ObservableObject {
                 }
             }
         }
-
         return configuredURL.path
     }
 
-    private func publishRunning(_ running: Bool) {
-        DispatchQueue.main.async {
-            self.isRunning = running
+    private func shellQuote(_ s: String) -> String {
+        if s.isEmpty { return "''" }
+        return "'\(s.replacingOccurrences(of: "'", with: "'\\\\''"))'"
+    }
+
+    private func stringValue(for key: String, in dict: [String: Any]) -> String? {
+        if let value = dict[key] as? String {
+            let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+            return (trimmed.isEmpty || trimmed == "-") ? nil : trimmed
         }
+        if let value = dict[key] as? NSNumber { return value.stringValue }
+        return nil
+    }
+
+    private func doubleValue(for key: String, in dict: [String: Any]) -> Double? {
+        if let value = dict[key] as? NSNumber { return value.doubleValue }
+        guard let text = stringValue(for: key, in: dict) else { return nil }
+        return Double(text)
+    }
+
+    private func publishRunning(_ running: Bool) {
+        DispatchQueue.main.async { self.isRunning = running }
     }
 
     private func appendOutput(_ output: String) {
@@ -532,6 +467,8 @@ class EasyTierService: ObservableObject {
             self.parseLogEntries(output)
         }
     }
+
+    // MARK: - Privileged Log Polling
 
     private func startPrivilegedLogPolling(logURL: URL) {
         stopPrivilegedLogPolling()
@@ -562,8 +499,6 @@ class EasyTierService: ObservableObject {
             if let output = String(data: data, encoding: .utf8), !output.isEmpty {
                 appendOutput(output)
             }
-        } catch {
-            return
-        }
+        } catch { return }
     }
 }

@@ -176,7 +176,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
-        NSRunningApplication.current.activate(options: [.activateAllWindows, .activateIgnoringOtherApps])
+        NSRunningApplication.current.activate(options: .activateAllWindows)
         NSApp.activate(ignoringOtherApps: true)
 
         if let window = resolvedMainWindow() {
@@ -188,7 +188,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             window.makeKeyAndOrderFront(nil)
             window.orderFrontRegardless()
             mainWindow = window
-            NSRunningApplication.current.activate(options: [.activateAllWindows, .activateIgnoringOtherApps])
+            NSRunningApplication.current.activate(options: .activateAllWindows)
             NSApp.activate(ignoringOtherApps: true)
             return
         }
@@ -207,7 +207,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 self.mainWindow = window
             }
 
-            NSRunningApplication.current.activate(options: [.activateAllWindows, .activateIgnoringOtherApps])
+            NSRunningApplication.current.activate(options: .activateAllWindows)
             NSApp.activate(ignoringOtherApps: true)
         }
     }

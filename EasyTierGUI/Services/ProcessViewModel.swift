@@ -1,7 +1,17 @@
+//
+//  ProcessViewModel.swift
+//  EasyTierGUI
+//
+//  主 ViewModel - 管理网络配置和运行时状态
+//
+
 import Foundation
 import Combine
 import SwiftUI
 
+// MARK: - Network Runtime
+
+/// 单个网络的运行时状态
 @MainActor
 final class NetworkRuntime: ObservableObject, Identifiable {
     let id: UUID
@@ -21,6 +31,7 @@ final class NetworkRuntime: ObservableObject, Identifiable {
         self.id = id
         self.rpcPortalProvider = rpcPortalProvider
 
+        // 监听服务状态变化
         service.$isRunning
             .receive(on: DispatchQueue.main)
             .sink { [weak self] isRunning in
@@ -39,11 +50,12 @@ final class NetworkRuntime: ObservableObject, Identifiable {
     }
 
     deinit {
-        // Clean up timer to prevent memory leaks
         peerTimer?.invalidate()
         peerTimer = nil
         cancellables.removeAll()
     }
+
+    // MARK: - Connection Control
 
     func connect(config: EasyTierConfig) async {
         status = .connecting
@@ -74,10 +86,12 @@ final class NetworkRuntime: ObservableObject, Identifiable {
         service.clearLogs()
     }
 
+    // MARK: - Peer Polling
+
     private func startPeerPolling() {
         peerTimer?.invalidate()
         peerTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { [weak self] _ in
-            Task {@MainActor in
+            Task { @MainActor in
                 self?.fetchPeers()
             }
         }
@@ -108,22 +122,30 @@ final class NetworkRuntime: ObservableObject, Identifiable {
     }
 }
 
-// MARK: - ProcessViewModel
+// MARK: - Process ViewModel
 
+/// 主 ViewModel - 协调多网络配置和运行时
 @MainActor
 class ProcessViewModel: ObservableObject {
+
+    // MARK: - Published Properties
+
     @Published var status: NetworkStatus = .disconnected
     @Published var selectedTab: AppTab = .connection
 
-    let configManager = ConfigManager()
+    // MARK: - Dependencies
 
+    let configManager = ConfigManager()
     @Published private(set) var runtimes: [UUID: NetworkRuntime] = [:]
 
     private var cancellables = Set<AnyCancellable>()
 
+    // MARK: - Initialization
+
     init() {
         syncRuntimes(with: configManager.configs)
 
+        // 监听配置变化
         configManager.$configs
             .receive(on: DispatchQueue.main)
             .sink { [weak self] configs in
@@ -150,6 +172,8 @@ class ProcessViewModel: ObservableObject {
         return FileManager.default.isExecutableFile(atPath: corePath)
     }
 
+    // MARK: - Active Config/Runtime
+
     var activeConfig: EasyTierConfig? {
         configManager.activeConfig
     }
@@ -175,6 +199,8 @@ class ProcessViewModel: ObservableObject {
         runtimes.values.contains(where: { $0.service.isRunning })
     }
 
+    // MARK: - Status Helpers
+
     func status(for config: EasyTierConfig) -> NetworkStatus {
         runtime(for: config.id).status
     }
@@ -186,6 +212,8 @@ class ProcessViewModel: ObservableObject {
     func isRunning(_ config: EasyTierConfig) -> Bool {
         runtime(for: config.id).service.isRunning
     }
+
+    // MARK: - Connection Control
 
     func connect() async {
         guard let config = activeConfig else { return }
@@ -209,8 +237,10 @@ class ProcessViewModel: ObservableObject {
             return
         }
 
+        // 检查端口冲突
         let conflictingNetwork = configManager.configs.first {
-            $0.id != config.id && isRunning($0) && ($0.listenPort == config.listenPort || $0.rpcPortalPort == config.rpcPortalPort)
+            $0.id != config.id && isRunning($0) &&
+            ($0.listenPort == config.listenPort || $0.rpcPortalPort == config.rpcPortalPort)
         }
 
         if let conflict = conflictingNetwork {
@@ -239,6 +269,8 @@ class ProcessViewModel: ObservableObject {
         }
     }
 
+    // MARK: - Log Management
+
     func clearActiveLogs() {
         activeRuntime?.clearLogs()
     }
@@ -255,6 +287,8 @@ class ProcessViewModel: ObservableObject {
         }
     }
 
+    // MARK: - Config Management
+
     func addNewConfig() {
         let config = EasyTierConfig(name: "网络 \(configManager.configs.count + 1)")
         configManager.addConfig(config)
@@ -265,6 +299,8 @@ class ProcessViewModel: ObservableObject {
         guard !isRunning(config) else { return }
         configManager.deleteConfig(at: index)
     }
+
+    // MARK: - Private Methods
 
     private func runtime(for id: UUID) -> NetworkRuntime {
         if let existing = runtimes[id] {
@@ -294,13 +330,10 @@ class ProcessViewModel: ObservableObject {
             runtimes.removeValue(forKey: id)
         }
     }
+
     private func refreshOverallStatus() {
         let statuses = runtimes.values.map(\.status)
-
-        // Collect detailed status for each network
-        let detailedStatuses = configManager.configs.map { config in
-            (name: config.name, status: status(for: config))
-        }
+        let detailedStatuses = configManager.configs.map { (name: $0.name, status: status(for: $0)) }
 
         if statuses.contains(.error) {
             status = .error
@@ -316,12 +349,11 @@ class ProcessViewModel: ObservableObject {
     }
 }
 
-// MARK: - App Tab Enum
+// MARK: - App Tab
+
+/// 应用标签页
 enum AppTab: String, CaseIterable, Identifiable {
-    case connection
-    case peers
-    case logs
-    case settings
+    case connection, peers, logs, settings
 
     var id: String { rawValue }
 
