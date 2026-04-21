@@ -102,6 +102,20 @@ sudo /Applications/EasyTierGUI.app/Contents/MacOS/EasyTierGUI
 ./create-dmg.sh
 ```
 
+### 更换应用图标
+
+使用 `generate-icons.sh` 脚本从 PNG 图片生成 macOS 应用图标：
+
+```bash
+# 准备一张 1024x1024 的正方形 PNG 图片
+./generate-icons.sh ./logo.png
+```
+
+要求：
+- 源图片必须是正方形
+- 推荐尺寸 ≥ 1024x1024
+- 脚本会自动生成所有需要的尺寸到 `Assets.xcassets/AppIcon.appiconset`
+
 ## 技术栈
 
 - **语言**: Swift 5.9
