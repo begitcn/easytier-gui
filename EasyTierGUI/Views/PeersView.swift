@@ -11,7 +11,7 @@ struct PeersView: View {
 
     private var selectedConfigIndex: Binding<Int> {
         Binding(
-            get: { max(vm.configManager.activeConfigIndex, 0) },
+            get: { max(vm.activeConfigIndex, 0) },
             set: { vm.configManager.setActiveConfig(at: $0) }
         )
     }

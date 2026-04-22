@@ -111,8 +111,11 @@ final class NetworkRuntime: ObservableObject, Identifiable {
 
         service.fetchPeers(rpcPortalPort: port) { [weak self] newPeers in
             DispatchQueue.main.async {
-                self?.peers = newPeers
-                self?.onStateChange?()
+                guard let self = self else { return }
+                if self.peers != newPeers {
+                    self.peers = newPeers
+                    self.onStateChange?()
+                }
             }
         }
     }
@@ -131,19 +134,20 @@ class ProcessViewModel: ObservableObject {
     // MARK: - Published Properties
 
     @Published var status: NetworkStatus = .disconnected
-    @Published var selectedTab: AppTab = .connection
+    @Published private(set) var activeConfigIndex: Int = -1
 
     // MARK: - Dependencies
 
     let configManager = ConfigManager()
-    @Published private(set) var runtimes: [UUID: NetworkRuntime] = [:]
+    private var runtimes: [UUID: NetworkRuntime] = [:]
 
     private var cancellables = Set<AnyCancellable>()
-    private let kLastUpdateCheck = "easytierLastUpdateCheck"
+    private var dailyUpdateCheckTask: Task<Void, Never>?
 
     // MARK: - Initialization
 
     init() {
+        activeConfigIndex = configManager.activeConfigIndex
         syncRuntimes(with: configManager.configs)
 
         // 监听配置变化
@@ -158,16 +162,16 @@ class ProcessViewModel: ObservableObject {
         configManager.$activeConfigIndex
             .removeDuplicates()
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in
-                self?.objectWillChange.send()
+            .sink { [weak self] index in
+                self?.activeConfigIndex = index
             }
             .store(in: &cancellables)
 
-        // 后台检查 EasyTier 核心版本更新
-        Task {
-            try? await Task.sleep(nanoseconds: 3_000_000_000) // 延迟 3 秒
-            await checkForBinaryUpdate()
-        }
+        startDailyUpdateCheckScheduler()
+    }
+
+    deinit {
+        dailyUpdateCheckTask?.cancel()
     }
 
     // MARK: - Core Detection
@@ -177,16 +181,41 @@ class ProcessViewModel: ObservableObject {
         BinaryManager.shared.binaryExists(for: .core)
     }
 
-    // MARK: - Binary Update Check
+    // MARK: - Binary Update Check Scheduler
 
-    private func checkForBinaryUpdate() async {
-        if let lastCheck = UserDefaults.standard.object(forKey: kLastUpdateCheck) as? Date {
-            let elapsed = Date().timeIntervalSince(lastCheck)
-            if elapsed < 86400 { // 24h 节流，避免频繁请求远端
-                return
+    private func startDailyUpdateCheckScheduler() {
+        dailyUpdateCheckTask?.cancel()
+        dailyUpdateCheckTask = Task { [weak self] in
+            guard let self else { return }
+
+            while !Task.isCancelled {
+                let sleepNanoseconds = self.nanosecondsUntilNextCheck(hour: 14, minute: 0)
+                try? await Task.sleep(nanoseconds: sleepNanoseconds)
+                guard !Task.isCancelled else { break }
+                await BinaryManager.shared.checkForUpdate()
             }
         }
-        await BinaryManager.shared.checkForUpdate()
+    }
+
+    private func nanosecondsUntilNextCheck(hour: Int, minute: Int) -> UInt64 {
+        let calendar = Calendar.current
+        let now = Date()
+
+        guard var nextCheck = calendar.date(
+            bySettingHour: hour,
+            minute: minute,
+            second: 0,
+            of: now
+        ) else {
+            return 60 * 1_000_000_000
+        }
+
+        if nextCheck <= now {
+            nextCheck = calendar.date(byAdding: .day, value: 1, to: nextCheck) ?? now.addingTimeInterval(24 * 3600)
+        }
+
+        let interval = max(1, nextCheck.timeIntervalSince(now))
+        return UInt64(interval * 1_000_000_000)
     }
 
     // MARK: - Active Config/Runtime
@@ -197,7 +226,7 @@ class ProcessViewModel: ObservableObject {
 
     var activeRuntime: NetworkRuntime? {
         guard let config = activeConfig else { return nil }
-        return runtime(for: config.id)
+        return runtimeIfExists(for: config.id)
     }
 
     var peers: [PeerInfo] {
@@ -219,15 +248,15 @@ class ProcessViewModel: ObservableObject {
     // MARK: - Status Helpers
 
     func status(for config: EasyTierConfig) -> NetworkStatus {
-        runtime(for: config.id).status
+        runtimeIfExists(for: config.id)?.status ?? .disconnected
     }
 
     func errorMessage(for config: EasyTierConfig) -> String? {
-        runtime(for: config.id).errorMessage
+        runtimeIfExists(for: config.id)?.errorMessage
     }
 
     func isRunning(_ config: EasyTierConfig) -> Bool {
-        runtime(for: config.id).service.isRunning
+        runtimeIfExists(for: config.id)?.service.isRunning ?? false
     }
 
     // MARK: - Connection Control
@@ -263,7 +292,7 @@ class ProcessViewModel: ObservableObject {
 
     func connect(configID: UUID) async {
         guard let config = configManager.configs.first(where: { $0.id == configID }) else { return }
-        let runtime = runtime(for: configID)
+        let runtime = ensureRuntime(for: configID)
 
         // 检查内核是否存在
         guard easytierCoreExists else {
@@ -274,13 +303,22 @@ class ProcessViewModel: ObservableObject {
         }
 
         // 检查端口冲突
-        let conflictingNetwork = configManager.configs.first {
-            $0.id != config.id && isRunning($0) &&
-            ($0.listenPort == config.listenPort || $0.rpcPortalPort == config.rpcPortalPort)
+        let listenConflict = configManager.configs.first {
+            $0.id != config.id && isRunning($0) && $0.listenPort == config.listenPort
+        }
+        let rpcConflict = configManager.configs.first {
+            $0.id != config.id && isRunning($0) && $0.rpcPortalPort == config.rpcPortalPort
         }
 
-        if let conflict = conflictingNetwork {
-            runtime.errorMessage = "端口冲突：\"\(conflict.name)\" 与当前网络使用了相同的监听端口或管理端口。"
+        if listenConflict != nil || rpcConflict != nil {
+            var conflictDetails: [String] = []
+            if let listenConflict {
+                conflictDetails.append("监听端口 \(config.listenPort) 与「\(listenConflict.name)」冲突")
+            }
+            if let rpcConflict {
+                conflictDetails.append("管理端口 \(config.rpcPortalPort) 与「\(rpcConflict.name)」冲突")
+            }
+            runtime.errorMessage = "无法连接：端口冲突。\n" + conflictDetails.joined(separator: "\n")
             runtime.status = .error
             refreshOverallStatus()
             return
@@ -311,9 +349,21 @@ class ProcessViewModel: ObservableObject {
         activeRuntime?.clearLogs()
     }
 
-    func forceStopAllSync() {
+    func clearAllLogs() {
         for runtime in runtimes.values {
-            runtime.service.forceStop()
+            runtime.clearLogs()
+        }
+    }
+
+    func setLogMonitoringEnabled(_ enabled: Bool) {
+        for runtime in runtimes.values {
+            runtime.service.setLogMonitoringEnabled(enabled)
+        }
+    }
+
+    func forceStopAllSync(allowPrivilegePrompt: Bool = true) {
+        for runtime in runtimes.values {
+            runtime.service.forceStop(allowPrivilegePrompt: allowPrivilegePrompt)
         }
     }
 
@@ -372,6 +422,14 @@ class ProcessViewModel: ObservableObject {
         }
         runtimes[id] = runtime
         return runtime
+    }
+
+    private func runtimeIfExists(for id: UUID) -> NetworkRuntime? {
+        runtimes[id]
+    }
+
+    private func ensureRuntime(for id: UUID) -> NetworkRuntime {
+        runtime(for: id)
     }
 
     private func syncRuntimes(with configs: [EasyTierConfig]) {

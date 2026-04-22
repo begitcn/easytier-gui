@@ -23,6 +23,9 @@ class ConfigManager: ObservableObject {
     private let configsDirectory: URL
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
+    private let persistenceQueue = DispatchQueue(label: "EasyTierGUI.ConfigPersistence", qos: .utility)
+    private var pendingSaveWorkItem: DispatchWorkItem?
+    private let saveDebounceInterval: TimeInterval = 0.5
 
     // MARK: - Initialization
 
@@ -56,14 +59,14 @@ class ConfigManager: ObservableObject {
 
     /// 更新配置
     func updateConfig(_ config: EasyTierConfig, at index: Int) {
-        guard index < configs.count else { return }
+        guard index >= 0, index < configs.count else { return }
         configs[index] = config
         saveConfigs()
     }
 
     /// 删除配置
     func deleteConfig(at index: Int) {
-        guard index < configs.count else { return }
+        guard index >= 0, index < configs.count else { return }
         configs.remove(at: index)
 
         if activeConfigIndex == index {
@@ -77,7 +80,7 @@ class ConfigManager: ObservableObject {
 
     /// 设置当前活动配置
     func setActiveConfig(at index: Int) {
-        guard index < configs.count else { return }
+        guard index >= 0, index < configs.count else { return }
         activeConfigIndex = index
         saveConfigs()
     }
@@ -98,11 +101,31 @@ class ConfigManager: ObservableObject {
     // MARK: - Persistence
 
     private func saveConfigs() {
-        let data = try? encoder.encode(configs)
-        try? data?.write(to: configsDirectory.appendingPathComponent("configs.json"))
+        let configsSnapshot = configs
+        let activeIndexSnapshot = activeConfigIndex
+        let directory = configsDirectory
 
-        let indexData = try? JSONEncoder().encode(activeConfigIndex)
-        try? indexData?.write(to: configsDirectory.appendingPathComponent("active_index.json"))
+        pendingSaveWorkItem?.cancel()
+        let workItem = DispatchWorkItem {
+            var configEncoder = JSONEncoder()
+            configEncoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+
+            if let data = try? configEncoder.encode(configsSnapshot) {
+                try? data.write(
+                    to: directory.appendingPathComponent("configs.json"),
+                    options: .atomic
+                )
+            }
+
+            if let indexData = try? JSONEncoder().encode(activeIndexSnapshot) {
+                try? indexData.write(
+                    to: directory.appendingPathComponent("active_index.json"),
+                    options: .atomic
+                )
+            }
+        }
+        pendingSaveWorkItem = workItem
+        persistenceQueue.asyncAfter(deadline: .now() + saveDebounceInterval, execute: workItem)
     }
 
     private func loadConfigs() {

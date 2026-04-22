@@ -19,7 +19,7 @@ struct ConnectionView: View {
                 // Configuration Section (Bottom)
                 if let config = vm.configManager.activeConfig {
                     ConfigFormView(config: config) { updatedConfig in
-                        let index = vm.configManager.activeConfigIndex
+                        let index = vm.activeConfigIndex
                         vm.configManager.updateConfig(updatedConfig, at: index)
                     }
                     .id(config.id)
@@ -59,6 +59,7 @@ struct ConfigFormView: View {
     @State var config: EasyTierConfig
     @EnvironmentObject var vm: ProcessViewModel
     var onSave: (EasyTierConfig) -> Void
+    @State private var saveTask: Task<Void, Never>?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -129,10 +130,11 @@ struct ConfigFormView: View {
             .frame(minHeight: 360)
             .disabled(vm.activeConfig.map(vm.isRunning) ?? false)
             .onChange(of: config) { _, newValue in
-                onSave(newValue)
+                scheduleSave(for: newValue)
             }
             .onChange(of: vm.configManager.activeConfig?.id) { _, _ in
                 if let activeConfig = vm.configManager.activeConfig {
+                    saveTask?.cancel()
                     config = activeConfig
                 }
             }
@@ -145,6 +147,9 @@ struct ConfigFormView: View {
                 .stroke(Color.white.opacity(0.12), lineWidth: 1)
         )
         .shadow(color: Color.black.opacity(0.08), radius: 12, y: 4)
+        .onDisappear {
+            saveTask?.cancel()
+        }
     }
 
     @ViewBuilder
@@ -176,6 +181,15 @@ struct ConfigFormView: View {
                 .multilineTextAlignment(.trailing)
         }
     }
+
+    private func scheduleSave(for value: EasyTierConfig) {
+        saveTask?.cancel()
+        saveTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 350_000_000)
+            guard !Task.isCancelled else { return }
+            onSave(value)
+        }
+    }
 }
 
 
@@ -190,6 +204,8 @@ struct ConfigListSection: View {
     @State private var showImportError = false
     @State private var importErrorMessage = ""
     @State private var showExportAllSuccess = false
+    @State private var showConnectErrorAlert = false
+    @State private var connectErrorMessage = ""
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -274,7 +290,9 @@ struct ConfigListSection: View {
                 ForEach(vm.configManager.configs.indices, id: \.self) { index in
                     let config = vm.configManager.configs[index]
                     let isRunning = vm.isRunning(config)
-                    let isActive = vm.configManager.activeConfigIndex == index
+                    let isActive = vm.activeConfigIndex == index
+                    let status = vm.status(for: config)
+                    let runtimeError = vm.errorMessage(for: config)
 
                     HStack(spacing: 14) {
                         // Selection indicator
@@ -288,25 +306,19 @@ struct ConfigListSection: View {
                                     .font(.system(.body, design: .rounded))
                                     .fontWeight(isActive ? .semibold : .regular)
 
-                                if isRunning {
-                                    HStack(spacing: 3) {
-                                        Circle()
-                                            .fill(Color.green)
-                                            .frame(width: 5, height: 5)
-                                        Text("运行中")
-                                    }
-                                    .font(.system(size: 9, weight: .medium))
-                                    .padding(.horizontal, 6)
-                                    .padding(.vertical, 2)
-                                    .background(Color.green.opacity(0.15))
-                                    .foregroundColor(.green)
-                                    .clipShape(Capsule())
-                                }
+                                statusBadge(for: status)
                             }
 
                             Text(config.networkName.isEmpty ? "未命名网络" : config.networkName)
                                 .font(.system(size: 11, design: .rounded))
                                 .foregroundColor(.secondary)
+
+                            if let runtimeError, !runtimeError.isEmpty {
+                                Label(runtimeError, systemImage: "exclamationmark.triangle.fill")
+                                    .font(.system(size: 11, design: .rounded))
+                                    .foregroundColor(.red.opacity(0.9))
+                                    .lineLimit(2)
+                            }
                         }
 
                         Spacer()
@@ -335,7 +347,7 @@ struct ConfigListSection: View {
                                         validationMessage = msg
                                         showValidationAlert = true
                                     } else {
-                                        Task { await vm.connect(configID: config.id) }
+                                        Task { await connect(config) }
                                     }
                                 }
                             }
@@ -433,6 +445,11 @@ struct ConfigListSection: View {
         } message: {
             Text("所有配置已成功导出")
         }
+        .alert("连接失败", isPresented: $showConnectErrorAlert) {
+            Button("好的", role: .cancel) {}
+        } message: {
+            Text(connectErrorMessage)
+        }
     }
 
     // MARK: - Import/Export Methods
@@ -517,7 +534,7 @@ struct ConfigListSection: View {
         Task {
             for config in vm.configManager.configs {
                 if !vm.isRunning(config) && validateConfig(config) == nil {
-                    await vm.connect(configID: config.id)
+                    await connect(config)
                 }
             }
         }
@@ -530,6 +547,60 @@ struct ConfigListSection: View {
                     await vm.disconnect(configID: config.id)
                 }
             }
+        }
+    }
+
+    private func connect(_ config: EasyTierConfig) async {
+        await vm.connect(configID: config.id)
+        guard let error = vm.errorMessage(for: config), !error.isEmpty else {
+            return
+        }
+        connectErrorMessage = "「\(config.name)」连接失败：\n\(error)"
+        showConnectErrorAlert = true
+    }
+
+    @ViewBuilder
+    private func statusBadge(for status: NetworkStatus) -> some View {
+        switch status {
+        case .connected:
+            HStack(spacing: 3) {
+                Circle()
+                    .fill(Color.green)
+                    .frame(width: 5, height: 5)
+                Text("运行中")
+            }
+            .font(.system(size: 9, weight: .medium))
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(Color.green.opacity(0.15))
+            .foregroundColor(.green)
+            .clipShape(Capsule())
+        case .connecting:
+            HStack(spacing: 3) {
+                ProgressView()
+                    .controlSize(.mini)
+                Text("连接中")
+            }
+            .font(.system(size: 9, weight: .medium))
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(Color.orange.opacity(0.15))
+            .foregroundColor(.orange)
+            .clipShape(Capsule())
+        case .error:
+            HStack(spacing: 3) {
+                Image(systemName: "xmark.octagon.fill")
+                    .font(.system(size: 8))
+                Text("连接失败")
+            }
+            .font(.system(size: 9, weight: .medium))
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(Color.red.opacity(0.15))
+            .foregroundColor(.red)
+            .clipShape(Capsule())
+        case .disconnected:
+            EmptyView()
         }
     }
 }

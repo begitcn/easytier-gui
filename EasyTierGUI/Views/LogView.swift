@@ -1,31 +1,83 @@
 import SwiftUI
+import AppKit
 
 // MARK: - LogView
-// Real-time log viewer with filtering capabilities
 
 struct LogView: View {
     @EnvironmentObject var vm: ProcessViewModel
-    @State private var searchText = ""
-    @State private var autoScroll = true
+    @AppStorage("enableLogMonitoring") private var enableLogMonitoring = false
 
-    var filteredLogs: [LogEntry] {
-        var logs = vm.activeRuntime?.service.logEntries ?? []
-
-        // Filter by search
-        if !searchText.isEmpty {
-            let query = searchText.lowercased()
-            logs = logs.filter { $0.message.lowercased().contains(query) }
-        }
-
-        return logs
+    private var selectedConfigIndex: Binding<Int> {
+        Binding(
+            get: { max(vm.activeConfigIndex, 0) },
+            set: { vm.configManager.setActiveConfig(at: $0) }
+        )
     }
+
+    var body: some View {
+        Group {
+            if !enableLogMonitoring {
+                ContentUnavailableView(
+                    "日志监控已关闭",
+                    systemImage: "ladybug.slash",
+                    description: Text("在“设置 > 通用”里开启“启用日志监控（调试）”后可查看实时日志")
+                )
+            } else if vm.configManager.configs.isEmpty {
+                ContentUnavailableView(
+                    "暂无可用网络",
+                    systemImage: "rectangle.stack.badge.plus",
+                    description: Text("请先在连接页面创建一个虚拟网络")
+                )
+            } else if let runtime = vm.activeRuntime {
+                LogRuntimeView(
+                    service: runtime.service,
+                    activeName: vm.activeConfig?.name,
+                    configs: vm.configManager.configs,
+                    selectedConfigIndex: selectedConfigIndex
+                )
+                .id(runtime.id)
+            } else {
+                ContentUnavailableView(
+                    "未选择网络",
+                    systemImage: "doc.text.magnifyingglass",
+                    description: Text("请先选择一个虚拟网络")
+                )
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(NSColor.windowBackgroundColor))
+    }
+}
+
+private struct LogRuntimeView: View {
+    @ObservedObject var service: EasyTierService
+    let activeName: String?
+    let configs: [EasyTierConfig]
+    @Binding var selectedConfigIndex: Int
+
+    @State private var searchText = ""
+    @State private var effectiveSearchText = ""
+    @State private var searchDebounceTask: Task<Void, Never>?
+    @State private var autoScroll = true
+    @State private var filteredLogs: [LogEntry] = []
+
+    private var logCount: Int { service.logEntries.count }
+    private var lastLogID: UUID? { service.logEntries.last?.id }
 
     var body: some View {
         VStack(spacing: 0) {
             VStack(spacing: 0) {
-                // Toolbar
                 HStack(spacing: 16) {
-                    // Search
+                    if !configs.isEmpty {
+                        Picker("", selection: $selectedConfigIndex) {
+                            ForEach(configs.indices, id: \.self) { index in
+                                Text(configs[index].name).tag(index)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        .frame(width: 160)
+                    }
+
                     HStack {
                         Image(systemName: "magnifyingglass").foregroundColor(.secondary)
                         TextField("过滤日志消息...", text: $searchText)
@@ -39,14 +91,11 @@ struct LogView: View {
 
                     Spacer()
 
-                    // Controls
                     Toggle("自动滚动", isOn: $autoScroll)
                         .toggleStyle(.switch)
                         .padding(.trailing, 8)
 
-                    Button(action: {
-                        exportLogs()
-                    }) {
+                    Button(action: { exportLogs() }) {
                         Image(systemName: "square.and.arrow.up")
                             .frame(width: 32, height: 32)
                             .background(Color(NSColor.controlBackgroundColor).opacity(0.5))
@@ -55,7 +104,7 @@ struct LogView: View {
                     .buttonStyle(.plain)
 
                     Button(action: {
-                        vm.clearActiveLogs()
+                        service.clearLogs()
                     }) {
                         Image(systemName: "trash")
                             .foregroundColor(.red.opacity(0.8))
@@ -67,7 +116,6 @@ struct LogView: View {
                 }
                 .padding(20)
 
-                // Log Content
                 if filteredLogs.isEmpty {
                     ContentUnavailableView(
                         "暂无日志",
@@ -97,7 +145,6 @@ struct LogView: View {
                     }
                 }
 
-                // Status bar
                 HStack {
                     Text("\(filteredLogs.count) 条记录")
                         .font(.system(.caption, design: .rounded))
@@ -105,7 +152,7 @@ struct LogView: View {
 
                     Spacer()
 
-                    if let activeName = vm.activeConfig?.name {
+                    if let activeName {
                         Text(activeName)
                             .font(.system(.caption, design: .rounded).weight(.semibold))
                             .foregroundColor(.primary)
@@ -117,7 +164,7 @@ struct LogView: View {
 
                     Spacer()
 
-                    if vm.activeRuntime?.service.isRunning ?? false {
+                    if service.isRunning {
                         HStack(spacing: 4) {
                             Circle()
                                 .fill(Color.green)
@@ -147,11 +194,42 @@ struct LogView: View {
             .padding(.horizontal, 24)
             .padding(.bottom, 24)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(NSColor.windowBackgroundColor))
+        .onChange(of: searchText) { _, newValue in
+            searchDebounceTask?.cancel()
+            searchDebounceTask = Task { @MainActor in
+                try? await Task.sleep(nanoseconds: 250_000_000)
+                guard !Task.isCancelled else { return }
+                effectiveSearchText = newValue
+            }
+        }
+        .onChange(of: effectiveSearchText) { _, _ in
+            updateFilteredLogs()
+        }
+        .onChange(of: logCount) { _, _ in
+            updateFilteredLogs()
+        }
+        .onChange(of: lastLogID) { _, _ in
+            updateFilteredLogs()
+        }
+        .onAppear {
+            effectiveSearchText = searchText
+            updateFilteredLogs()
+        }
+        .onDisappear {
+            searchDebounceTask?.cancel()
+        }
     }
 
-    // MARK: - Export
+    private func updateFilteredLogs() {
+        let logs = service.logEntries
+        guard !effectiveSearchText.isEmpty else {
+            filteredLogs = logs
+            return
+        }
+
+        let query = effectiveSearchText.lowercased()
+        filteredLogs = logs.filter { $0.message.lowercased().contains(query) }
+    }
 
     private func exportLogs() {
         let panel = NSSavePanel()
@@ -214,8 +292,6 @@ struct LogEntryRow: View {
         }
     }
 }
-
-// MARK: - Preview
 
 #Preview {
     LogView()

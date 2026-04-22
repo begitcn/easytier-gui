@@ -12,6 +12,7 @@ class MenuBarManager: ObservableObject {
 
     @Published var connectionStatus: NetworkStatus = .disconnected
     private var networkStatuses: [(name: String, status: NetworkStatus)] = []
+    private var lastStatusSnapshot: String?
 
     // Cache tinted images to avoid recreating them
     private var cachedImages: [NetworkStatus: NSImage] = [:]
@@ -88,9 +89,21 @@ class MenuBarManager: ObservableObject {
     }
 
     func updateStatus(_ status: NetworkStatus, networkStatuses: [(name: String, status: NetworkStatus)] = []) {
+        let snapshot = makeStatusSnapshot(status: status, networkStatuses: networkStatuses)
+        if snapshot == lastStatusSnapshot {
+            return
+        }
+        lastStatusSnapshot = snapshot
+
         self.networkStatuses = networkStatuses
         updateIcon(status: status)
-        statusItem?.menu = buildMenu()
+    }
+
+    private func makeStatusSnapshot(status: NetworkStatus, networkStatuses: [(name: String, status: NetworkStatus)]) -> String {
+        let details = networkStatuses
+            .map { "\($0.name):\($0.status.rawValue)" }
+            .joined(separator: "|")
+        return "\(status.rawValue)#\(details)"
     }
 
     private func buildMenu() -> NSMenu {

@@ -39,7 +39,6 @@ final class BinaryManager: ObservableObject {
 
     private let kInstalledVersion = "easytierInstalledVersion"
     private let kBundledVersion = "easytierBundledVersion"
-    private let kLastUpdateCheck = "easytierLastUpdateCheck"
     private let kSkipVersion = "easytierSkipVersion"
 
     // MARK: - Initialization
@@ -130,6 +129,11 @@ final class BinaryManager: ObservableObject {
     }
 
     // MARK: - Version Detection
+
+    /// 重新检测当前版本（用于设置页主动刷新）
+    func refreshCurrentVersion() async {
+        await detectCurrentVersion()
+    }
 
     /// 检测当前安装的版本
     private func detectCurrentVersion() async {
@@ -222,7 +226,6 @@ final class BinaryManager: ObservableObject {
                 updateState = .upToDate
             }
 
-            UserDefaults.standard.set(Date(), forKey: kLastUpdateCheck)
         } catch {
             updateState = .error(error.localizedDescription)
         }

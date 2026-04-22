@@ -6,13 +6,14 @@ import SwiftUI
 struct ContentView: View {
     @EnvironmentObject var vm: ProcessViewModel
     @State private var columnVisibility: NavigationSplitViewVisibility = .automatic
+    @State private var selectedTab: AppTab = .connection
 
     var body: some View {
         NavigationSplitView {
-            SidebarView()
+            SidebarView(selectedTab: $selectedTab)
                 .navigationSplitViewColumnWidth(min: 180, ideal: 200, max: 260)
         } detail: {
-            DetailView()
+            DetailView(selectedTab: selectedTab)
         }
         .navigationTitle("EasyTier")
     }
@@ -21,10 +22,10 @@ struct ContentView: View {
 // MARK: - Sidebar
 
 struct SidebarView: View {
-    @EnvironmentObject var vm: ProcessViewModel
+    @Binding var selectedTab: AppTab
 
     var body: some View {
-        List(AppTab.allCases, selection: $vm.selectedTab) { tab in
+        List(AppTab.allCases, selection: $selectedTab) { tab in
             Label(tab.label, systemImage: tab.icon)
                 .tag(tab)
         }
@@ -35,10 +36,10 @@ struct SidebarView: View {
 // MARK: - Detail View Router
 
 struct DetailView: View {
-    @EnvironmentObject var vm: ProcessViewModel
+    let selectedTab: AppTab
 
     var body: some View {
-        switch vm.selectedTab {
+        switch selectedTab {
         case .connection:
             ConnectionView()
         case .peers:

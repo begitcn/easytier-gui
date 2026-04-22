@@ -6,6 +6,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 + (BOOL)ensureAuthorized:(NSError * _Nullable * _Nullable)error;
 + (nullable NSString *)runCommand:(NSString *)command error:(NSError * _Nullable * _Nullable)error;
++ (BOOL)isAuthorizedCached;
 
 @end
 

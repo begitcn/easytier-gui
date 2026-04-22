@@ -24,6 +24,10 @@ final class PrivilegedSessionManager {
         _ = timeout
         return try PrivilegedExecutor.runCommand(command)
     }
+
+    func isAuthorizedCached() -> Bool {
+        PrivilegedExecutor.isAuthorizedCached()
+    }
 }
 
 // MARK: - Errors
@@ -54,22 +58,32 @@ class EasyTierService: ObservableObject {
     // MARK: - Published Properties
 
     @Published var isRunning = false
-    @Published var processOutput = ""
     @Published var logEntries: [LogEntry] = []
 
     // MARK: - Memory Management
 
-    private let maxOutputLength = 50_000  // 最大输出缓冲 (约 50KB)
     private let maxLogEntries = 100       // 最大日志条数
+    private let maxLogMessageLength = 2000
 
     // MARK: - Private Properties
 
     private var process: Process?
     private var outputPipe: Pipe?
-    private var logFileHandle: FileHandle?
     private var privilegedLogTimer: Timer?
     private var privilegedLogOffset: UInt64 = 0
     private var privilegedPID: Int32?
+    private var privilegedLogURL: URL?
+    private let privilegedLogReadQueue = DispatchQueue(label: "EasyTierGUI.PrivilegedLogRead", qos: .utility)
+    private let peerFetchQueue = DispatchQueue(label: "EasyTierGUI.PeerFetch", qos: .utility)
+    private let peerFetchStateQueue = DispatchQueue(label: "EasyTierGUI.PeerFetchState")
+    private var isPeerFetchInProgress = false
+    private let peerFetchTimeout: TimeInterval = 4.0
+    private var pendingLogFragment = ""
+
+    private static let logLineRegex: NSRegularExpression? = try? NSRegularExpression(
+        pattern: #"\[([\d\-T:Z]+)\s+(\w+)\]\s+(.*)"#
+    )
+    private static let logDateFormatter = ISO8601DateFormatter()
 
     /// 解析后的可执行文件路径
     var executablePath: String {
@@ -133,6 +147,7 @@ class EasyTierService: ObservableObject {
             }
             try stopPrivileged()
             privilegedPID = nil
+            privilegedLogURL = nil
             stopPrivilegedLogPolling()
             publishRunning(false)
             return
@@ -154,23 +169,37 @@ class EasyTierService: ObservableObject {
 
         self.process = nil
         privilegedPID = nil
+        privilegedLogURL = nil
         stopPrivilegedLogPolling()
         publishRunning(false)
     }
 
     /// 强制停止进程
-    func forceStop() {
+    func forceStop(allowPrivilegePrompt: Bool = true) {
         outputPipe?.fileHandleForReading.readabilityHandler = nil
         outputPipe = nil
 
-        process?.terminate()
+        if let process, process.isRunning {
+            process.interrupt()
+            process.terminate()
+        }
 
         if shouldStopPrivilegedProcess {
-            try? stopPrivileged()
+            if allowPrivilegePrompt || PrivilegedSessionManager.shared.isAuthorizedCached() {
+                try? stopPrivileged()
+            } else if let pid = privilegedPID {
+                // Best-effort non-interactive stop. This may fail with EPERM for root-owned process.
+                _ = kill(pid, SIGTERM)
+                usleep(200_000)
+                if kill(pid, 0) == 0 {
+                    _ = kill(pid, SIGKILL)
+                }
+            }
         }
 
         process = nil
         privilegedPID = nil
+        privilegedLogURL = nil
         stopPrivilegedLogPolling()
         publishRunning(false)
     }
@@ -250,6 +279,7 @@ class EasyTierService: ObservableObject {
 
         process = nil
         privilegedPID = pid
+        privilegedLogURL = logURL
         startPrivilegedLogPolling(logURL: logURL)
         publishRunning(true)
     }
@@ -289,7 +319,6 @@ class EasyTierService: ObservableObject {
             }
             if let output = String(data: data, encoding: .utf8) {
                 DispatchQueue.main.async {
-                    self.processOutput.append(output)
                     self.parseLogEntries(output)
                 }
             }
@@ -298,7 +327,20 @@ class EasyTierService: ObservableObject {
 
     /// 解析日志条目
     private func parseLogEntries(_ text: String) {
-        let lines = text.components(separatedBy: .newlines)
+        guard isLogMonitoringEnabled else {
+            pendingLogFragment = ""
+            return
+        }
+
+        let combined = pendingLogFragment + text
+        let hasTrailingNewline = combined.unicodeScalars.last.map { CharacterSet.newlines.contains($0) } ?? false
+        var lines = combined.components(separatedBy: .newlines)
+        if !hasTrailingNewline, !lines.isEmpty {
+            pendingLogFragment = lines.removeLast()
+        } else {
+            pendingLogFragment = ""
+        }
+
         for line in lines where !line.trimmingCharacters(in: .whitespaces).isEmpty {
             logEntries.append(parseLogLine(line))
         }
@@ -309,32 +351,35 @@ class EasyTierService: ObservableObject {
 
     /// 解析单行日志
     private func parseLogLine(_ line: String) -> LogEntry {
-        let pattern = #"\[([\d\-T:Z]+)\s+(\w+)\]\s+(.*)"#
-
-        if let regex = try? NSRegularExpression(pattern: pattern),
+        if let regex = Self.logLineRegex,
            let match = regex.firstMatch(in: line, range: NSRange(line.startIndex..., in: line)) {
             let timestampStr = (line as NSString).substring(with: match.range(at: 1))
             let level = (line as NSString).substring(with: match.range(at: 2))
-            let message = (line as NSString).substring(with: match.range(at: 3))
-            let timestamp = ISO8601DateFormatter().date(from: timestampStr) ?? Date()
+            let message = clippedLogMessage((line as NSString).substring(with: match.range(at: 3)))
+            let timestamp = Self.logDateFormatter.date(from: timestampStr) ?? Date()
             return LogEntry(timestamp: timestamp, level: level, message: message)
         }
-        return LogEntry(timestamp: Date(), level: "INFO", message: line)
-    }
-
-    /// 清理输出缓冲
-    private func trimProcessOutput() {
-        if processOutput.count > maxOutputLength {
-            processOutput.removeFirst(processOutput.count - maxOutputLength)
-        }
+        return LogEntry(timestamp: Date(), level: "INFO", message: clippedLogMessage(line))
     }
 
     /// 清空日志
     func clearLogs() {
         DispatchQueue.main.async {
             self.logEntries.removeAll()
-            self.processOutput = ""
+            self.pendingLogFragment = ""
         }
+    }
+
+    func setLogMonitoringEnabled(_ enabled: Bool) {
+        if enabled {
+            if getuid() != 0, process == nil, shouldStopPrivilegedProcess, let logURL = privilegedLogURL {
+                startPrivilegedLogPolling(logURL: logURL)
+            }
+            return
+        }
+
+        stopPrivilegedLogPolling()
+        clearLogs()
     }
 
     // MARK: - Peer Info
@@ -346,6 +391,16 @@ class EasyTierService: ObservableObject {
             return
         }
 
+        let shouldStartFetch = peerFetchStateQueue.sync { () -> Bool in
+            if isPeerFetchInProgress { return false }
+            isPeerFetchInProgress = true
+            return true
+        }
+
+        guard shouldStartFetch else {
+            return
+        }
+
         let task = Process()
         task.executableURL = URL(fileURLWithPath: cliPath)
         task.arguments = ["-p", "127.0.0.1:\(rpcPortalPort)", "-o", "json", "peer", "list"]
@@ -354,14 +409,28 @@ class EasyTierService: ObservableObject {
         task.standardOutput = pipe
         task.standardError = pipe
 
-        DispatchQueue.global(qos: .utility).async {
+        peerFetchQueue.async {
             do {
                 try task.run()
-                task.waitUntilExit()
+
+                let waitGroup = DispatchGroup()
+                waitGroup.enter()
+                DispatchQueue.global(qos: .utility).async {
+                    task.waitUntilExit()
+                    waitGroup.leave()
+                }
+
+                if waitGroup.wait(timeout: .now() + self.peerFetchTimeout) == .timedOut {
+                    task.terminate()
+                    _ = waitGroup.wait(timeout: .now() + 1.0)
+                    self.finishPeerFetch([], completion: completion)
+                    return
+                }
+
                 let data = pipe.fileHandleForReading.readDataToEndOfFile()
-                completion(self.decodePeers(from: data))
+                self.finishPeerFetch(self.decodePeers(from: data), completion: completion)
             } catch {
-                completion([])
+                self.finishPeerFetch([], completion: completion)
             }
         }
     }
@@ -372,29 +441,26 @@ class EasyTierService: ObservableObject {
     }
 
     private func decodePeers(from data: Data) -> [PeerInfo] {
-        guard let json = try? JSONSerialization.jsonObject(with: data) else { return [] }
+        let decoder = JSONDecoder()
+        let peerItems: [PeerDTO]
 
-        let items: [[String: Any]]
-        if let array = json as? [[String: Any]] {
-            items = array
-        } else if let object = json as? [String: Any] {
-            items = object["peers"] as? [[String: Any]]
-                ?? object["rows"] as? [[String: Any]]
-                ?? object["data"] as? [[String: Any]]
-                ?? []
+        if let array = try? decoder.decode([PeerDTO].self, from: data) {
+            peerItems = array
+        } else if let payload = try? decoder.decode(PeerPayload.self, from: data) {
+            peerItems = payload.peers ?? payload.rows ?? payload.data ?? []
         } else {
-            items = []
+            return []
         }
 
-        return items.map { item in
+        return peerItems.map { item in
             PeerInfo(
-                nodeID: stringValue(for: "id", in: item) ?? "unknown",
-                ipv4: stringValue(for: "ipv4", in: item) ?? "-",
-                hostname: stringValue(for: "hostname", in: item) ?? "未知节点",
+                nodeID: item.id ?? "unknown",
+                ipv4: item.ipv4 ?? "-",
+                hostname: item.hostname ?? "未知节点",
                 status: .online,
-                latencyMs: doubleValue(for: "lat_ms", in: item),
-                cost: stringValue(for: "cost", in: item),
-                tunnelProto: stringValue(for: "tunnel_proto", in: item),
+                latencyMs: item.latencyMs,
+                cost: item.cost,
+                tunnelProto: item.tunnelProto,
                 location: nil
             )
         }
@@ -407,30 +473,30 @@ class EasyTierService: ObservableObject {
         return "'\(s.replacingOccurrences(of: "'", with: "'\\\\''"))'"
     }
 
-    private func stringValue(for key: String, in dict: [String: Any]) -> String? {
-        if let value = dict[key] as? String {
-            let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
-            return (trimmed.isEmpty || trimmed == "-") ? nil : trimmed
-        }
-        if let value = dict[key] as? NSNumber { return value.stringValue }
-        return nil
-    }
-
-    private func doubleValue(for key: String, in dict: [String: Any]) -> Double? {
-        if let value = dict[key] as? NSNumber { return value.doubleValue }
-        guard let text = stringValue(for: key, in: dict) else { return nil }
-        return Double(text)
-    }
-
     private func publishRunning(_ running: Bool) {
         DispatchQueue.main.async { self.isRunning = running }
     }
 
     private func appendOutput(_ output: String) {
         DispatchQueue.main.async {
-            self.processOutput.append(output)
-            self.trimProcessOutput()
             self.parseLogEntries(output)
+        }
+    }
+
+    private var isLogMonitoringEnabled: Bool {
+        UserDefaults.standard.bool(forKey: "enableLogMonitoring")
+    }
+
+    private func clippedLogMessage(_ message: String) -> String {
+        guard message.count > maxLogMessageLength else { return message }
+        let prefix = message.prefix(maxLogMessageLength)
+        return "\(prefix)... [truncated]"
+    }
+
+    private func finishPeerFetch(_ peers: [PeerInfo], completion: @escaping ([PeerInfo]) -> Void) {
+        peerFetchStateQueue.async {
+            self.isPeerFetchInProgress = false
+            completion(peers)
         }
     }
 
@@ -447,19 +513,31 @@ class EasyTierService: ObservableObject {
     // MARK: - Privileged Log Polling
 
     private func startPrivilegedLogPolling(logURL: URL) {
+        guard isLogMonitoringEnabled else { return }
         stopPrivilegedLogPolling()
         DispatchQueue.main.async {
             self.privilegedLogTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
-                self?.readPrivilegedLogIncrement(from: logURL)
+                guard let self = self else { return }
+                guard self.isLogMonitoringEnabled else {
+                    self.stopPrivilegedLogPolling()
+                    return
+                }
+                self.privilegedLogReadQueue.async { [weak self] in
+                    self?.readPrivilegedLogIncrement(from: logURL)
+                }
             }
         }
-        readPrivilegedLogIncrement(from: logURL)
+        privilegedLogReadQueue.async { [weak self] in
+            self?.readPrivilegedLogIncrement(from: logURL)
+        }
     }
 
     private func stopPrivilegedLogPolling() {
         DispatchQueue.main.async {
             self.privilegedLogTimer?.invalidate()
             self.privilegedLogTimer = nil
+        }
+        privilegedLogReadQueue.async {
             self.privilegedLogOffset = 0
         }
     }
@@ -476,5 +554,65 @@ class EasyTierService: ObservableObject {
                 appendOutput(output)
             }
         } catch { return }
+    }
+}
+
+private struct PeerPayload: Decodable {
+    let peers: [PeerDTO]?
+    let rows: [PeerDTO]?
+    let data: [PeerDTO]?
+}
+
+private struct PeerDTO: Decodable {
+    let id: String?
+    let ipv4: String?
+    let hostname: String?
+    let latencyMs: Double?
+    let cost: String?
+    let tunnelProto: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id, ipv4, hostname, cost
+        case latencyMs = "lat_ms"
+        case tunnelProto = "tunnel_proto"
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = container.decodeLossyString(forKey: .id)
+        ipv4 = container.decodeLossyString(forKey: .ipv4)
+        hostname = container.decodeLossyString(forKey: .hostname)
+        latencyMs = container.decodeLossyDouble(forKey: .latencyMs)
+        cost = container.decodeLossyString(forKey: .cost)
+        tunnelProto = container.decodeLossyString(forKey: .tunnelProto)
+    }
+}
+
+private extension KeyedDecodingContainer {
+    func decodeLossyString(forKey key: K) -> String? {
+        if let string = try? decodeIfPresent(String.self, forKey: key) {
+            let trimmed = string.trimmingCharacters(in: .whitespacesAndNewlines)
+            return (trimmed.isEmpty || trimmed == "-") ? nil : trimmed
+        }
+        if let intValue = try? decodeIfPresent(Int.self, forKey: key) {
+            return String(intValue)
+        }
+        if let doubleValue = try? decodeIfPresent(Double.self, forKey: key) {
+            return String(doubleValue)
+        }
+        return nil
+    }
+
+    func decodeLossyDouble(forKey key: K) -> Double? {
+        if let value = try? decodeIfPresent(Double.self, forKey: key) {
+            return value
+        }
+        if let intValue = try? decodeIfPresent(Int.self, forKey: key) {
+            return Double(intValue)
+        }
+        if let string = try? decodeIfPresent(String.self, forKey: key) {
+            return Double(string.trimmingCharacters(in: .whitespacesAndNewlines))
+        }
+        return nil
     }
 }

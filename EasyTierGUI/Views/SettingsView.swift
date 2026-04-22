@@ -18,6 +18,7 @@ struct SettingsView: View {
     @AppStorage("showMenuBar") private var showMenuBar = true
     @AppStorage("autoConnectOnLaunch") private var autoConnectOnLaunch = false
     @AppStorage("showDockIcon") private var showDockIcon = true
+    @AppStorage("enableLogMonitoring") private var enableLogMonitoring = false
 
     @State private var openAtLoginManager = OpenAtLoginManager()
     @State private var showVisibilityAlert = false
@@ -73,6 +74,13 @@ struct SettingsView: View {
                         ))
 
                         Toggle("启动时自动连接", isOn: $autoConnectOnLaunch)
+                        Toggle("启用日志监控（调试）", isOn: .init(
+                            get: { enableLogMonitoring },
+                            set: { newValue in
+                                enableLogMonitoring = newValue
+                                vm.setLogMonitoringEnabled(newValue)
+                            }
+                        ))
                     }
 
                     // MARK: - 关于 Section
@@ -111,7 +119,8 @@ struct SettingsView: View {
         .background(Color(NSColor.windowBackgroundColor))
         .onAppear {
             Task {
-                await checkForUpdateIfNeeded()
+                await Task.yield()
+                await binaryManager.refreshCurrentVersion()
             }
         }
         .alert("无法保存设置", isPresented: $showVisibilityAlert) {
@@ -207,13 +216,6 @@ struct SettingsView: View {
             }
         }
 
-        // 上次检查时间
-        if let lastCheck = UserDefaults.standard.object(forKey: "easytierLastUpdateCheck") as? Date {
-            LabeledContent("上次检查") {
-                Text(lastCheck, style: .relative)
-                    .foregroundColor(.secondary)
-            }
-        }
     }
 
     // MARK: - Update Action Section
@@ -229,8 +231,7 @@ struct SettingsView: View {
             } label: {
                 if binaryManager.isCheckingForUpdate {
                     ProgressView()
-                        .scaleEffect(0.7)
-                        .frame(width: 16, height: 16)
+                        .controlSize(.small)
                 } else {
                     Text("检查更新")
                 }
@@ -246,29 +247,11 @@ struct SettingsView: View {
         }
     }
 
-    // MARK: - Computed Properties
+    // MARK: - Actions
 
     private var isUpdating: Bool {
         if case .downloading = binaryManager.updateState { return true }
         return false
-    }
-
-    // MARK: - Actions
-
-    private func checkForUpdateIfNeeded() async {
-        // 检查是否需要自动检查（启动后 2 秒，且超过 24 小时未检查）
-        guard !binaryManager.isCheckingForUpdate else { return }
-
-        if let lastCheck = UserDefaults.standard.object(forKey: "easytierLastUpdateCheck") as? Date {
-            let elapsed = Date().timeIntervalSince(lastCheck)
-            if elapsed < 86400 { // 24 hours
-                return
-            }
-        }
-
-        // 延迟 2 秒后检查
-        try? await Task.sleep(nanoseconds: 2_000_000_000)
-        await binaryManager.checkForUpdate()
     }
 
     private func startUpdate() {

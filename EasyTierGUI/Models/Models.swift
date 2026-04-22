@@ -146,7 +146,8 @@ struct TunConfig: Codable, Equatable {
 
 /// 网络节点信息
 struct PeerInfo: Identifiable, Equatable {
-    var id = UUID()
+    // Use a stable identity so SwiftUI can diff peer rows across polling updates.
+    var id: String { "\(nodeID)|\(ipv4)" }
     var nodeID: String        // 节点 ID
     var ipv4: String          // IPv4 地址
     var hostname: String      // 主机名

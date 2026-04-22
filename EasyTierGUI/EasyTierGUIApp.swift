@@ -46,7 +46,8 @@ struct EasyTierGUIApp: App {
         // Register default values for AppStorage
         UserDefaults.standard.register(defaults: [
             "showDockIcon": true,
-            "showMenuBar": true
+            "showMenuBar": true,
+            "enableLogMonitoring": false
         ])
     }
 
@@ -114,8 +115,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var openMainWindowAction: (() -> Void)?
 
     func applicationWillTerminate(_ notification: Notification) {
-        // Stop all background processes synchronously on exit
-        processVM?.forceStopAllSync()
+        // Stop processes on exit without triggering a new password prompt.
+        processVM?.forceStopAllSync(allowPrivilegePrompt: false)
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {

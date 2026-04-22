@@ -21,9 +21,10 @@
 		A1000000000000000000000C /* MenuBarManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000000C /* MenuBarManager.swift */; };
 		A1000000000000000000000D /* PrivilegedExecutor.m in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000000D /* PrivilegedExecutor.m */; };
 		A1000000000000000000000E /* BinaryVersion.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000010 /* BinaryVersion.swift */; };
-		A1000000000000000000000F /* BinaryManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000011 /* BinaryManager.swift */; };
-		A10000000000000000000010 /* GitHubReleaseService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000012 /* GitHubReleaseService.swift */; };
-		A10000000000000000000011 /* UpdateBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000013 /* UpdateBanner.swift */; };
+			A1000000000000000000000F /* BinaryManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000011 /* BinaryManager.swift */; };
+			A10000000000000000000010 /* GitHubReleaseService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000012 /* GitHubReleaseService.swift */; };
+			A10000000000000000000011 /* UpdateBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000013 /* UpdateBanner.swift */; };
+			A10000000000000000000012 /* easytier in Resources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000014 /* easytier */; };
 
 /* Begin PBXFileReference section */
 		A20000000000000000000001 /* EasyTierGUIApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EasyTierGUIApp.swift; sourceTree = "<group>"; };
@@ -42,10 +43,11 @@
 		A2000000000000000000000E /* PrivilegedExecutor.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PrivilegedExecutor.h; sourceTree = "<group>"; };
 		A2000000000000000000000F /* EasyTierGUI-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "EasyTierGUI-Bridging-Header.h"; sourceTree = "<group>"; };
 		A20000000000000000000010 /* BinaryVersion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BinaryVersion.swift; sourceTree = "<group>"; };
-		A20000000000000000000011 /* BinaryManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BinaryManager.swift; sourceTree = "<group>"; };
-		A20000000000000000000012 /* GitHubReleaseService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitHubReleaseService.swift; sourceTree = "<group>"; };
-		A20000000000000000000013 /* UpdateBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateBanner.swift; sourceTree = "<group>"; };
-		A30000000000000000000001 /* EasyTierGUI.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = EasyTierGUI.app; sourceTree = BUILT_PRODUCTS_DIR; };
+			A20000000000000000000011 /* BinaryManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BinaryManager.swift; sourceTree = "<group>"; };
+			A20000000000000000000012 /* GitHubReleaseService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitHubReleaseService.swift; sourceTree = "<group>"; };
+			A20000000000000000000013 /* UpdateBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateBanner.swift; sourceTree = "<group>"; };
+			A20000000000000000000014 /* easytier */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Resources/easytier; sourceTree = "<group>"; };
+			A30000000000000000000001 /* EasyTierGUI.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = EasyTierGUI.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -74,9 +76,10 @@
 				A2000000000000000000000F /* EasyTierGUI-Bridging-Header.h */,
 				A50000000000000000000004 /* Views */,
 				A50000000000000000000005 /* Services */,
-				A50000000000000000000006 /* Models */,
-				A20000000000000000000003 /* Assets.xcassets */,
-			);
+					A50000000000000000000006 /* Models */,
+					A20000000000000000000003 /* Assets.xcassets */,
+					A20000000000000000000014 /* easytier */,
+				);
 			path = EasyTierGUI;
 			sourceTree = "<group>";
 		};
@@ -191,9 +194,10 @@
 		A90000000000000000000002 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
-			files = (
-				A10000000000000000000003 /* Assets.xcassets in Resources */,
-			);
+				files = (
+					A10000000000000000000003 /* Assets.xcassets in Resources */,
+					A10000000000000000000012 /* easytier in Resources */,
+				);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */

@@ -96,6 +96,11 @@ actor GitHubReleaseService {
 
         let expectedLength = httpResponse.expectedContentLength
         var receivedLength: Int64 = 0
+        let chunkSize = 64 * 1024
+        let progressStepBytes: Int64 = 256 * 1024
+        var bytesSinceLastProgress: Int64 = 0
+        var buffer = Data()
+        buffer.reserveCapacity(chunkSize)
 
         // 创建文件句柄
         FileManager.default.createFile(atPath: destination.path, contents: nil)
@@ -107,15 +112,26 @@ actor GitHubReleaseService {
 
         // 流式写入
         for try await byte in asyncBytes {
-            try fileHandle.write(contentsOf: [byte])
+            buffer.append(byte)
             receivedLength += 1
+            bytesSinceLastProgress += 1
 
-            if expectedLength > 0 {
+            if buffer.count >= chunkSize {
+                try fileHandle.write(contentsOf: buffer)
+                buffer.removeAll(keepingCapacity: true)
+            }
+
+            if expectedLength > 0, (bytesSinceLastProgress >= progressStepBytes || receivedLength == expectedLength) {
                 let progressValue = Double(receivedLength) / Double(expectedLength)
                 await MainActor.run {
                     progress(progressValue)
                 }
+                bytesSinceLastProgress = 0
             }
+        }
+
+        if !buffer.isEmpty {
+            try fileHandle.write(contentsOf: buffer)
         }
 
         await MainActor.run {
