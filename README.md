@@ -18,7 +18,6 @@
 ## 系统要求
 
 - macOS 14.0+
-- [EasyTier](https://github.com/EasyTier/EasyTier/releases) 可执行文件
 
 ## 安装
 
@@ -26,10 +25,7 @@
 
 1. 下载 `EasyTierGUI.dmg`
 2. 打开 DMG，将应用拖入 Applications 文件夹
-3. 从终端运行（首次需要 root 权限）：
-   ```bash
-   sudo /Applications/EasyTierGUI.app/Contents/MacOS/EasyTierGUI
-   ```
+3. 首次打开应用时，macOS 可能会要求授权，请在系统偏好设置中允许
 
 ### 从源码编译
 
@@ -49,10 +45,11 @@ cd easytier-gui
 
 ### 快速开始
 
-1. **下载 EasyTier** - 从 [Releases](https://github.com/EasyTier/EasyTier/releases) 下载 `easytier-core` 和 `easytier-cli`
-2. **配置路径** - 在设置中指定 EasyTier 可执行文件目录
-3. **创建网络** - 填写网络名称和密码
-4. **连接** - 点击连接按钮
+1. **启动应用** - 打开 EasyTier GUI
+2. **创建网络** - 填写网络名称和密码
+3. **连接** - 点击连接按钮
+
+> 💡 EasyTier 核心已内置，首次启动会自动检测更新，无需手动下载。
 
 ### 配置说明
 
@@ -69,21 +66,14 @@ cd easytier-gui
 
 ### TUN device error: Operation not permitted
 
-EasyTier 需要 root 权限创建 TUN 网络设备。解决方法：
+EasyTier 需要权限创建 TUN 网络设备。应用会自动请求授权，请在弹出的对话框中输入密码授权。
+
+如果仍然失败，可以尝试：
 
 ```bash
-# 方法 1: 使用启动脚本
-./launch-easytier-gui.sh
-
-# 方法 2: 直接以 root 运行
+# 从终端以 root 运行
 sudo /Applications/EasyTierGUI.app/Contents/MacOS/EasyTierGUI
 ```
-
-### 找不到 easytier-core
-
-1. 从 [EasyTier Releases](https://github.com/EasyTier/EasyTier/releases) 下载
-2. 放置在 `/usr/local/bin` 或 `/opt/homebrew/bin`
-3. 或在设置中指定自定义路径
 
 ### 连接失败
 
