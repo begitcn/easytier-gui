@@ -272,8 +272,14 @@ class ProcessViewModel: ObservableObject {
     }
 
     func connectAll() async {
-        // Connect all networks sequentially to avoid race conditions
-        for config in configManager.configs {
+        // Connect all networks with a small delay between each to avoid
+        // overwhelming the authorization system and UI thread
+        for (index, config) in configManager.configs.enumerated() {
+            if index > 0 {
+                // Add a small delay between connections to allow the previous
+                // process to fully initialize before starting the next one
+                try? await Task.sleep(nanoseconds: 1_500_000_000) // 1.5 seconds
+            }
             await connect(configID: config.id)
         }
     }

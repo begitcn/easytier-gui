@@ -111,7 +111,17 @@ class EasyTierService: ObservableObject {
 
         // 非 root 用户使用特权模式启动
         if getuid() != 0 {
-            try startPrivileged(config: config)
+            // Run privileged execution on a background thread to avoid blocking main thread
+            try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+                DispatchQueue.global(qos: .userInitiated).async {
+                    do {
+                        try self.startPrivileged(config: config)
+                        continuation.resume()
+                    } catch {
+                        continuation.resume(throwing: error)
+                    }
+                }
+            }
             return
         }
 
@@ -246,6 +256,37 @@ class EasyTierService: ObservableObject {
     }
 
     // MARK: - Privileged Execution
+
+    /// 清理所有遗留的 easytier-core 进程（应用启动时调用）
+    static func cleanupOrphanedProcesses() {
+        // 只在非 root 用户下尝试清理，root 用户可以直接 kill
+        guard getuid() != 0 else { return }
+
+        // 检查是否有缓存的授权，避免弹出密码框
+        guard PrivilegedSessionManager.shared.isAuthorizedCached() else {
+            // 没有授权缓存，尝试用普通用户权限清理可能存在的非特权进程
+            try? runCleanupCommandWithoutPrivilege()
+            return
+        }
+
+        // 有授权缓存，可以清理特权进程
+        try? runCleanupCommandWithPrivilege()
+    }
+
+    private static func runCleanupCommandWithoutPrivilege() throws {
+        let task = Process()
+        task.executableURL = URL(fileURLWithPath: "/usr/bin/pkill")
+        task.arguments = ["-f", "easytier-core"]
+        try? task.run()
+        task.waitUntilExit()
+    }
+
+    private static func runCleanupCommandWithPrivilege() throws {
+        _ = try? PrivilegedSessionManager.shared.run(
+            command: "pkill -9 -f 'easytier-core' 2>/dev/null || true; pkill -9 -f 'etgui-' 2>/dev/null || true; echo cleaned",
+            timeout: 3
+        )
+    }
 
     /// 以特权模式启动进程
     private func startPrivileged(config: EasyTierConfig) throws {

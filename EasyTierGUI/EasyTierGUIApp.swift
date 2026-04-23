@@ -127,6 +127,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         AppDelegate.shared = self
+
+        // Clean up any orphaned easytier-core processes from previous sessions
+        // (e.g., if the app crashed or was force-quit)
+        EasyTierService.cleanupOrphanedProcesses()
+
         // Create menu bar icon
         MenuBarManager.shared.setupMenuBar()
         checkRootPrivileges()
