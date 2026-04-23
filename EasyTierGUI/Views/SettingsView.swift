@@ -91,7 +91,7 @@ struct SettingsView: View {
                         }
 
                         LabeledContent("版本") {
-                            Text("1.3")
+                            Text("1.4")
                                 .foregroundColor(.secondary)
                         }
 
