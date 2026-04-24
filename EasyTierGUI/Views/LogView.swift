@@ -262,12 +262,24 @@ struct LogEntryRow: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
+            // Level icon
+            Image(systemName: levelIcon)
+                .font(.system(size: 12))
+                .foregroundColor(levelColor)
+                .frame(width: 16)
+                .padding(.top, 4)
+
+            // Level badge
+            levelBadge
+
+            // Timestamp
             Text(entry.timestamp.formatted(date: .omitted, time: .standard))
                 .font(.system(.caption, design: .monospaced))
                 .foregroundColor(.secondary)
-                .frame(width: 80, alignment: .leading)
+                .frame(width: 60, alignment: .leading)
                 .padding(.top, 4)
 
+            // Message content
             Text(entry.message)
                 .font(.system(.body, design: .monospaced))
                 .foregroundColor(.primary.opacity(0.9))
@@ -281,12 +293,41 @@ struct LogEntryRow: View {
         .cornerRadius(8)
     }
 
+    private var levelIcon: String {
+        switch entry.level.lowercased() {
+        case "error", "err": return "exclamationmark.circle.fill"
+        case "warn", "warning": return "exclamationmark.triangle.fill"
+        case "debug", "trace": return "ant.fill"
+        default: return "info.circle.fill"
+        }
+    }
+
+    private var levelColor: Color {
+        switch entry.level.lowercased() {
+        case "error", "err": return .red
+        case "warn", "warning": return .orange
+        case "debug", "trace": return .secondary
+        default: return .primary
+        }
+    }
+
+    private var levelBadge: some View {
+        let displayLevel = entry.level.uppercased()
+        return Text(displayLevel)
+            .font(.system(size: 9, weight: .bold, design: .monospaced))
+            .foregroundColor(levelColor)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(levelColor.opacity(0.15))
+            .cornerRadius(4)
+    }
+
     private var logBackgroundColor: Color {
         switch entry.level.lowercased() {
         case "error", "err":
-            return Color.red.opacity(0.08)
+            return Color.red.opacity(0.1)
         case "warn", "warning":
-            return Color.orange.opacity(0.08)
+            return Color.orange.opacity(0.1)
         default:
             return showIndex % 2 == 0 ? Color(NSColor.controlBackgroundColor).opacity(0.2) : Color.clear
         }
