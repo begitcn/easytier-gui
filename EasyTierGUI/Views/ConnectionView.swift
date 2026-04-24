@@ -2,6 +2,37 @@ import SwiftUI
 import AppKit
 import UniformTypeIdentifiers
 
+// MARK: - Hover Effect ViewModifier
+
+struct HoverEffectModifier: ViewModifier {
+    @State private var isHovered = false
+    let normalOpacity: Double
+    let hoverOpacity: Double
+    let scaleOnHover: Bool
+
+    init(normal: Double = 1.0, hover: Double = 0.85, scale: Bool = false) {
+        self.normalOpacity = normal
+        self.hoverOpacity = hover
+        self.scaleOnHover = scale
+    }
+
+    func body(content: Content) -> some View {
+        content
+            .opacity(isHovered ? hoverOpacity : normalOpacity)
+            .scaleEffect(isHovered && scaleOnHover ? 1.1 : 1.0)
+            .animation(.quick, value: isHovered)
+            .onHover { hovering in
+                isHovered = hovering
+            }
+    }
+}
+
+extension View {
+    func hoverEffect(normal: Double = 1.0, hover: Double = 0.85, scale: Bool = false) -> some View {
+        modifier(HoverEffectModifier(normal: normal, hover: hover, scale: scale))
+    }
+}
+
 // MARK: - ConnectionView
 // View for managing EasyTier connection and network configuration
 
@@ -236,7 +267,7 @@ struct ConfigListSection: View {
                         }
                         .font(.system(size: 11, weight: .medium))
                     }
-                    .buttonStyle(.plain)
+                    .hoverEffect(normal: 1.0, hover: 0.85)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 5)
                     .background(Color.green.opacity(0.1))
@@ -262,7 +293,7 @@ struct ConfigListSection: View {
                         }
                         .font(.system(size: 11, weight: .medium))
                     }
-                    .buttonStyle(.plain)
+                    .hoverEffect(normal: 1.0, hover: 0.85)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 5)
                     .background(Color.red.opacity(0.1))
@@ -281,7 +312,7 @@ struct ConfigListSection: View {
                         }
                         .font(.system(size: 11, weight: .medium))
                     }
-                    .buttonStyle(.plain)
+                    .hoverEffect(normal: 1.0, hover: 0.85)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 5)
                     .background(Color.accentColor.opacity(0.1))
@@ -295,7 +326,7 @@ struct ConfigListSection: View {
                         }
                         .font(.system(size: 11, weight: .medium))
                     }
-                    .buttonStyle(.plain)
+                    .hoverEffect(normal: 1.0, hover: 0.85)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 5)
                     .background(Color.orange.opacity(0.1))
@@ -358,7 +389,7 @@ struct ConfigListSection: View {
                                     .background(Color.secondary.opacity(0.08))
                                     .cornerRadius(6)
                             }
-                            .buttonStyle(.plain)
+                            .hoverEffect(scale: true)
                             .help("导出此配置")
 
                             // Connect/Disconnect button
@@ -385,7 +416,7 @@ struct ConfigListSection: View {
                                 .font(.system(size: 12, weight: .medium))
                                 .frame(minWidth: 60)
                             }
-                            .buttonStyle(.plain)
+                            .hoverEffect(normal: 1.0, hover: 0.85)
                             .padding(.horizontal, 14)
                             .padding(.vertical, 6)
                             .background(isRunning ? Color.red.opacity(0.12) : Color.accentColor.opacity(0.12))
@@ -407,7 +438,7 @@ struct ConfigListSection: View {
                                     .background(Color.red.opacity(0.08))
                                     .cornerRadius(6)
                             }
-                            .buttonStyle(.plain)
+                            .hoverEffect(scale: true)
                             .disabled(isRunning || isOperating || vm.configManager.configs.count <= 1)
                             .opacity((isRunning || isOperating || vm.configManager.configs.count <= 1) ? 0.3 : 1)
                         }
@@ -449,7 +480,7 @@ struct ConfigListSection: View {
                     RoundedRectangle(cornerRadius: 10).stroke(Color.white.opacity(0.08), style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
                 )
             }
-            .buttonStyle(.plain)
+            .hoverEffect(normal: 1.0, hover: 0.85)
             .foregroundColor(.secondary)
         }
         .padding(CGFloat.cardPadding)
