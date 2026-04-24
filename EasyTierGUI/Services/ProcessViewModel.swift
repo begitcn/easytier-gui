@@ -103,6 +103,11 @@ final class NetworkRuntime: ObservableObject, Identifiable {
         service.clearLogs()
     }
 
+    /// 刷新节点列表（供快捷键调用）
+    func refreshPeers() {
+        fetchPeers()
+    }
+
     // MARK: - Peer Polling
 
     private func startPeerPolling() {
@@ -355,6 +360,11 @@ class ProcessViewModel: ObservableObject {
             }
         }
         refreshOverallStatus()
+    }
+
+    /// 刷新节点列表（供快捷键调用）
+    func refreshPeers() async {
+        activeRuntime?.refreshPeers()
     }
 
     func connect(configID: UUID) async {

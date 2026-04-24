@@ -554,6 +554,7 @@ class EasyTierService: ObservableObject {
         task.standardError = pipe
 
         peerFetchQueue.async { [weak self] in
+            guard let self = self else { return }
             do {
                 try task.run()
 
