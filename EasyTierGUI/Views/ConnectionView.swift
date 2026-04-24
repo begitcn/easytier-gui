@@ -206,6 +206,8 @@ struct ConfigListSection: View {
     @State private var showExportAllSuccess = false
     @State private var showConnectErrorAlert = false
     @State private var connectErrorMessage = ""
+    @State private var isConnectingAll = false
+    @State private var isDisconnectingAll = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -218,10 +220,20 @@ struct ConfigListSection: View {
 
                 // 批量操作按钮
                 HStack(spacing: 6) {
-                    Button(action: { connectAll() }) {
+                    Button(action: {
+                        isConnectingAll = true
+                        Task {
+                            await connectAll()
+                            isConnectingAll = false
+                        }
+                    }) {
                         HStack(spacing: 4) {
-                            Image(systemName: "link")
-                            Text("全部连接")
+                            if isConnectingAll {
+                                ProgressView()
+                                    .controlSize(.small)
+                            }
+                            Image(systemName: isConnectingAll ? "" : "link")
+                            Text(isConnectingAll ? "连接中..." : "全部连接")
                         }
                         .font(.system(size: 11, weight: .medium))
                     }
@@ -231,13 +243,23 @@ struct ConfigListSection: View {
                     .background(Color.green.opacity(0.1))
                     .foregroundColor(.green)
                     .cornerRadius(6)
-                    .disabled(vm.configManager.configs.isEmpty || vm.isAnyNetworkRunning)
-                    .opacity((vm.configManager.configs.isEmpty || vm.isAnyNetworkRunning) ? 0.5 : 1)
+                    .disabled(vm.configManager.configs.isEmpty || vm.isAnyNetworkRunning || isConnectingAll)
+                    .opacity((vm.configManager.configs.isEmpty || vm.isAnyNetworkRunning || isConnectingAll) ? 0.5 : 1)
 
-                    Button(action: { disconnectAll() }) {
+                    Button(action: {
+                        isDisconnectingAll = true
+                        Task {
+                            await disconnectAll()
+                            isDisconnectingAll = false
+                        }
+                    }) {
                         HStack(spacing: 4) {
-                            Image(systemName: "link.circle")
-                            Text("全部断开")
+                            if isDisconnectingAll {
+                                ProgressView()
+                                    .controlSize(.small)
+                            }
+                            Image(systemName: isDisconnectingAll ? "" : "link.circle")
+                            Text(isDisconnectingAll ? "断开中..." : "全部断开")
                         }
                         .font(.system(size: 11, weight: .medium))
                     }
@@ -247,8 +269,8 @@ struct ConfigListSection: View {
                     .background(Color.red.opacity(0.1))
                     .foregroundColor(.red)
                     .cornerRadius(6)
-                    .disabled(!vm.isAnyNetworkRunning)
-                    .opacity(!vm.isAnyNetworkRunning ? 0.5 : 1)
+                    .disabled(!vm.isAnyNetworkRunning || isDisconnectingAll)
+                    .opacity((!vm.isAnyNetworkRunning || isDisconnectingAll) ? 0.5 : 1)
                 }
 
                 // 导入导出按钮
@@ -293,6 +315,9 @@ struct ConfigListSection: View {
                     let isActive = vm.activeConfigIndex == index
                     let status = vm.status(for: config)
                     let runtimeError = vm.errorMessage(for: config)
+                    let isConnectingNow = vm.isConnecting(config)
+                    let isDisconnectingNow = vm.isDisconnecting(config)
+                    let isOperating = vm.isOperating(config)
 
                     HStack(spacing: 14) {
                         // Selection indicator
@@ -338,7 +363,7 @@ struct ConfigListSection: View {
                             .help("导出此配置")
 
                             // Connect/Disconnect button
-                            Button(isRunning ? "断开" : "连接") {
+                            Button(action: {
                                 if isRunning {
                                     Task { await vm.disconnect(configID: config.id) }
                                 } else {
@@ -350,14 +375,25 @@ struct ConfigListSection: View {
                                         Task { await connect(config) }
                                     }
                                 }
+                            }) {
+                                HStack(spacing: 4) {
+                                    if isOperating {
+                                        ProgressView()
+                                            .controlSize(.small)
+                                    }
+                                    Text(isConnectingNow ? "连接中..." : (isDisconnectingNow ? "断开中..." : (isRunning ? "断开" : "连接")))
+                                }
+                                .font(.system(size: 12, weight: .medium))
+                                .frame(minWidth: 60)
                             }
                             .buttonStyle(.plain)
-                            .font(.system(size: 12, weight: .medium))
                             .padding(.horizontal, 14)
                             .padding(.vertical, 6)
                             .background(isRunning ? Color.red.opacity(0.12) : Color.accentColor.opacity(0.12))
                             .foregroundColor(isRunning ? .red : .accentColor)
                             .cornerRadius(6)
+                            .disabled(isOperating)
+                            .opacity(isOperating ? 0.6 : 1)
 
                             // Delete button
                             Button(action: {
@@ -373,8 +409,8 @@ struct ConfigListSection: View {
                                     .cornerRadius(6)
                             }
                             .buttonStyle(.plain)
-                            .disabled(isRunning || vm.configManager.configs.count <= 1)
-                            .opacity((isRunning || vm.configManager.configs.count <= 1) ? 0.3 : 1)
+                            .disabled(isRunning || isOperating || vm.configManager.configs.count <= 1)
+                            .opacity((isRunning || isOperating || vm.configManager.configs.count <= 1) ? 0.3 : 1)
                         }
                     }
                     .padding(.horizontal, 14)

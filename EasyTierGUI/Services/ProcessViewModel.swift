@@ -20,6 +20,8 @@ final class NetworkRuntime: ObservableObject, Identifiable {
     @Published var status: NetworkStatus = .disconnected
     @Published var errorMessage: String?
     @Published var peers: [PeerInfo] = []
+    @Published var isConnecting: Bool = false
+    @Published var isDisconnecting: Bool = false
 
     var onStateChange: (() -> Void)?
 
@@ -58,6 +60,9 @@ final class NetworkRuntime: ObservableObject, Identifiable {
     // MARK: - Connection Control
 
     func connect(config: EasyTierConfig) async {
+        isConnecting = true
+        defer { isConnecting = false }
+
         status = .connecting
         errorMessage = nil
         onStateChange?()
@@ -72,6 +77,9 @@ final class NetworkRuntime: ObservableObject, Identifiable {
     }
 
     func disconnect() async {
+        isDisconnecting = true
+        defer { isDisconnecting = false }
+
         do {
             try await service.stop()
             errorMessage = nil
@@ -264,6 +272,20 @@ class ProcessViewModel: ObservableObject {
 
     func isRunning(_ config: EasyTierConfig) -> Bool {
         runtimeIfExists(for: config.id)?.service.isRunning ?? false
+    }
+
+    // MARK: - Operation State Helpers
+
+    func isConnecting(_ config: EasyTierConfig) -> Bool {
+        runtimeIfExists(for: config.id)?.isConnecting ?? false
+    }
+
+    func isDisconnecting(_ config: EasyTierConfig) -> Bool {
+        runtimeIfExists(for: config.id)?.isDisconnecting ?? false
+    }
+
+    func isOperating(_ config: EasyTierConfig) -> Bool {
+        isConnecting(config) || isDisconnecting(config)
     }
 
     // MARK: - Connection Control
