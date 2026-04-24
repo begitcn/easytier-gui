@@ -159,65 +159,7 @@ struct PeersView: View {
                         // 节点列表
                         List {
                             ForEach(filteredPeers) { peer in
-                                HStack(spacing: CGFloat.spacingM) {
-                                    // 主机名
-                                    HStack(spacing: 4) {
-                                        if peer.cost == "Local" {
-                                            Image(systemName: "star.fill")
-                                                .foregroundColor(.accentColor)
-                                                .font(.system(.caption2))
-                                        }
-                                        Text(peer.hostname)
-                                            .font(.system(.body, design: .monospaced))
-                                            .fontWeight(.semibold)
-                                            .lineLimit(1)
-                                    }
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-
-                                    // IPv4
-                                    Text(peer.ipv4)
-                                        .font(.system(.body, design: .monospaced))
-                                        .padding(.horizontal, 6)
-                                        .padding(.vertical, 2)
-                                        .background(Color.secondary.opacity(0.1))
-                                        .cornerRadius(4)
-                                        .contextMenu {
-                                            Button("复制 IPv4") {
-                                                copyToPasteboard(peer.ipv4)
-                                            }
-                                        }
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-
-                                    // 延迟
-                                    if let latency = peer.latencyMs {
-                                        Text("\(formatLatency(latency)) ms")
-                                            .font(.system(.body, design: .monospaced))
-                                            .foregroundColor(latencyColor(latency))
-                                            .frame(width: 90, alignment: .trailing)
-                                    } else {
-                                        Text("-")
-                                            .foregroundColor(.secondary)
-                                            .frame(width: 90, alignment: .trailing)
-                                    }
-
-                                    // 连接方式
-                                    Text(peer.cost ?? "-")
-                                        .font(.system(.caption, design: .rounded))
-                                        .padding(.horizontal, 8)
-                                        .padding(.vertical, 4)
-                                        .background(peer.cost == nil ? Color.clear : (peer.cost == "Local" ? Color.accentColor.opacity(0.3) : Color.accentColor.opacity(0.15)))
-                                        .foregroundColor(peer.cost == nil ? .secondary : .accentColor)
-                                        .clipShape(Capsule())
-                                        .frame(width: 80, alignment: .center)
-                                }
-                                .padding(.vertical, 4)
-                                .padding(.horizontal, 8)
-                                .contentShape(Rectangle())
-                                .listRowBackground(
-                                    peer.cost == "Local"
-                                        ? Color.accentColor.opacity(0.12)
-                                        : Color.clear
-                                )
+                                peerRow(peer: peer)
                             }
                         }
                         .listStyle(.plain)
@@ -249,9 +191,81 @@ struct PeersView: View {
         String(format: "%.2f", ms)
     }
 
+    @ViewBuilder
+    private func costBadge(cost: String?) -> some View {
+        let isLocal = cost == "Local"
+        let hasCost = cost != nil
+
+        Text(cost ?? "-")
+            .font(.system(.caption, design: .rounded))
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(hasCost ? (isLocal ? Color.accentColor.opacity(0.3) : Color.accentColor.opacity(0.15)) : Color.clear)
+            .foregroundColor(hasCost ? .accentColor : .secondary)
+            .clipShape(Capsule())
+            .frame(width: 80, alignment: .center)
+    }
+
     private func copyToPasteboard(_ value: String) {
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(value, forType: .string)
+    }
+
+    @ViewBuilder
+    private func peerRow(peer: PeerInfo) -> some View {
+        let isLocal = peer.cost == "Local"
+
+        HStack(spacing: CGFloat.spacingM) {
+            // 主机名
+            HStack(spacing: 4) {
+                if isLocal {
+                    Image(systemName: "star.fill")
+                        .foregroundColor(.accentColor)
+                        .font(.system(.caption2))
+                }
+                Text(peer.hostname)
+                    .font(.system(.body, design: .monospaced))
+                    .fontWeight(.semibold)
+                    .lineLimit(1)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            // IPv4
+            Text(peer.ipv4)
+                .font(.system(.body, design: .monospaced))
+                .padding(.horizontal, 6)
+                .padding(.vertical, 2)
+                .background(Color.secondary.opacity(0.1))
+                .cornerRadius(4)
+                .contextMenu {
+                    Button("复制 IPv4") {
+                        copyToPasteboard(peer.ipv4)
+                    }
+                }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            // 延迟
+            if let latency = peer.latencyMs {
+                Text("\(formatLatency(latency)) ms")
+                    .font(.system(.body, design: .monospaced))
+                    .foregroundColor(latencyColor(latency))
+                    .frame(width: 90, alignment: .trailing)
+            } else {
+                Text("-")
+                    .foregroundColor(.secondary)
+                    .frame(width: 90, alignment: .trailing)
+            }
+
+            // 连接方式
+            costBadge(cost: peer.cost)
+        }
+        .padding(.vertical, 4)
+        .padding(.horizontal, 8)
+        .contentShape(Rectangle())
+        .hoverEffect()
+        .listRowBackground(
+            isLocal ? Color.accentColor.opacity(0.12) : Color.clear
+        )
     }
 }
 
