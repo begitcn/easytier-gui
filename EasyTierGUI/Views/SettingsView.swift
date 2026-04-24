@@ -23,6 +23,7 @@ struct SettingsView: View {
     @State private var openAtLoginManager = OpenAtLoginManager()
     @State private var showVisibilityAlert = false
     @State private var showResetConfirmation = false
+    @State private var appear = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -39,6 +40,8 @@ struct SettingsView: View {
                         // 更新操作按钮
                         updateActionSection
                     }
+                    .opacity(appear ? 1 : 0)
+                    .offset(y: appear ? 0 : 10)
 
                     // MARK: - 通用 Section
                     Section(header: Text("通用").font(.system(.subheadline, design: .rounded))) {
@@ -82,6 +85,8 @@ struct SettingsView: View {
                             }
                         ))
                     }
+                    .opacity(appear ? 1 : 0)
+                    .offset(y: appear ? 0 : 10)
 
                     // MARK: - 关于 Section
                     Section(header: Text("关于").font(.system(.subheadline, design: .rounded))) {
@@ -100,6 +105,8 @@ struct SettingsView: View {
                                  destination: URL(string: "https://github.com/EasyTier/EasyTier")!)
                         }
                     }
+                    .opacity(appear ? 1 : 0)
+                    .offset(y: appear ? 0 : 10)
                 }
                 .formStyle(.grouped)
                 .scrollContentBackground(.hidden)
@@ -118,6 +125,9 @@ struct SettingsView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(NSColor.windowBackgroundColor))
         .onAppear {
+            withAnimation(.standard.delay(0.1)) {
+                appear = true
+            }
             Task {
                 await Task.yield()
                 await binaryManager.refreshCurrentVersion()
