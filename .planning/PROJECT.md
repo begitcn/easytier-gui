@@ -2,7 +2,7 @@
 
 ## What This Is
 
-EasyTier GUI 的性能与体验优化项目。这是一个现有的 macOS 原生应用，为 EasyTier P2P VPN 提供图形界面。本次优化聚焦于**性能、稳定性、交互反馈、内存管理、UI 简洁度**，不添加新功能。
+EasyTier GUI 的性能与体验优化项目。这是一个 macOS 原生应用，为 EasyTier P2P VPN 提供图形界面。v1.0 已完成性能、稳定性、交互反馈、内存管理、UI 简洁度优化。
 
 ## Core Value
 
@@ -12,7 +12,7 @@ EasyTier GUI 的性能与体验优化项目。这是一个现有的 macOS 原生
 
 ### Validated
 
-<!-- 现有已实现的功能，经过验证 -->
+<!-- v1.0 已验证的功能 -->
 
 - ✓ 多网络配置并发运行 — 每个配置独立的 NetworkRuntime
 - ✓ 内置 EasyTier 核心自动更新 — BinaryManager + GitHubReleaseService
@@ -23,24 +23,38 @@ EasyTier GUI 的性能与体验优化项目。这是一个现有的 macOS 原生
 - ✓ 权限提升执行 — PrivilegedExecutor (Objective-C 桥接)
 - ✓ 通用二进制支持 — arm64 + x86_64
 
+<!-- v1.0 新验证的需求 -->
+
+- ✓ **PERF-01**: 启动时无卡顿，快速响应 — v1.0 Phase 1
+- ✓ **PERF-02**: 连接/断开操作流畅，无 spinning ball — v1.0 Phase 1
+- ✓ **PERF-03**: 所有耗时操作在后台队列执行 — v1.0 Phase 1
+- ✓ **PERF-04**: 日志滚动流畅，无卡顿 — v1.0 Phase 1
+- ✓ **STAB-01**: 进程管理健壮，异常情况优雅处理 — v1.0 Phase 2
+- ✓ **STAB-02**: 应用退出时无孤儿进程残留 — v1.0 Phase 2
+- ✓ **STAB-03**: 权限错误有明确提示和处理 — v1.0 Phase 1
+- ✓ **STAB-04**: 大量日志不影响应用稳定性 — v1.0 Phase 2
+- ✓ **MEM-01**: 长时间运行内存稳定，无明显泄漏 — v1.0 Phase 2
+- ✓ **MEM-02**: 日志缓冲区大小可控 (maxLogEntries = 100) — v1.0 Phase 2
+- ✓ **MEM-03**: Combine 订阅正确管理，无遗留订阅 — v1.0 Phase 2
+- ✓ **MEM-04**: Timer 正确清理，无循环引用 — v1.0 Phase 2
+- ✓ **MEM-05**: FileHandle 正确关闭，无资源泄漏 — v1.0 Phase 2
+- ✓ **INT-01**: 连接按钮点击后立即显示加载状态 — v1.0 Phase 1
+- ✓ **INT-02**: 断开按钮点击后立即显示加载状态 — v1.0 Phase 1
+- ✓ **INT-03**: 操作成功有明确提示 — v1.0 Phase 1 (状态变化已足够)
+- ✓ **INT-04**: 操作失败有明确提示 — v1.0 Phase 1
+- ✓ **INT-05**: 加载状态清晰可见 — v1.0 Phase 1
+- ✓ **INT-06**: 错误信息用户友好 — v1.0 Phase 1
+- ✓ **UI-01**: 界面简洁美观，遵循苹果原生设计规范 — v1.0 Phase 3
+- ✓ **UI-02**: 信息层次分明，重点突出 — v1.0 Phase 3
+- ✓ **UI-03**: 连接状态视觉清晰 — v1.0 Phase 3
+- ✓ **UI-04**: 节点列表信息完整易读 — v1.0 Phase 3
+- ✓ **UI-05**: 日志视图颜色区分，易读性好 — v1.0 Phase 3
+
 ### Active
 
-<!-- 本次优化目标 -->
+<!-- 下一里程碑的目标 -->
 
-- [ ] **PERF-01**: 启动时无卡顿，快速响应
-- [ ] **PERF-02**: 连接/断开操作流畅，无 spinning ball
-- [ ] **STAB-01**: 所有操作在主线程保持响应，耗时操作异步执行
-- [ ] **STAB-02**: 进程管理健壮，异常情况优雅处理
-- [ ] **MEM-01**: 长时间运行内存稳定，无明显泄漏
-- [ ] **MEM-02**: 日志缓冲区大小可控，不无限增长
-- [ ] **MEM-03**: Combine 订阅正确管理，无遗留订阅
-- [ ] **INT-01**: 所有按钮点击有即时视觉反馈
-- [ ] **INT-02**: 操作成功/失败有明确提示（Toast/Alert）
-- [ ] **INT-03**: 加载状态清晰可见（进度指示器）
-- [ ] **INT-04**: 错误信息用户友好，可理解
-- [ ] **UI-01**: 界面简洁美观，遵循苹果原生设计规范
-- [ ] **UI-02**: 信息层次分明，重点突出
-- [ ] **UI-03**: 避免过度设计，保持克制
+(待定义下一里程碑)
 
 ### Out of Scope
 
@@ -51,41 +65,31 @@ EasyTier GUI 的性能与体验优化项目。这是一个现有的 macOS 原生
 - 跨平台支持 — 仅关注 macOS
 - 国际化/本地化 — 不在本次范围
 - 单元测试覆盖 — 可作为后续工作
+- 新增功能 — v1.0 仅优化现有功能，不添加新功能
 
 ## Context
 
-### 现有架构
+### 当前状态
 
-**MVVM 模式：**
-- View Layer: SwiftUI 视图 (ContentView, ConnectionView, PeersView, LogView, SettingsView)
-- ViewModel Layer: ProcessViewModel (主协调器), NetworkRuntime (单网络状态)
-- Service Layer: EasyTierService, ConfigManager, BinaryManager, MenuBarManager
-- System Layer: PrivilegedExecutor (Objective-C 权限桥接)
+**Shipped v1.0** — 2026-04-24
 
-**关键技术点：**
-- Combine 框架用于响应式状态管理
-- `@MainActor` 保证 UI 线程安全
-- Process 管理 easytier-core 子进程
-- Timer 定时轮询节点信息
+- 3 phases, 15 plans, 50 commits
+- 5,703 Swift LOC
+- All 24 v1 requirements verified
 
-### 已知问题点
+**技术栈:** Swift 5.9 + SwiftUI + Combine + AppKit
 
-**启动卡顿：**
-- 可能原因：启动时同步操作阻塞主线程
-- 需排查：AppDelegate.applicationDidFinishLaunching 中的操作
+### 已解决问题
 
-**连接/断开卡顿：**
-- 可能原因：权限检查、进程启动在主线程执行
-- 需排查：EasyTierService.start() 和 ProcessViewModel.connect()
+- ✅ 启动卡顿 → 异步初始化 + 加载指示器
+- ✅ 连接/断开卡顿 → 后台队列执行 + 即时视觉反馈
+- ✅ 内存增长 → Combine/Timer/FileHandle 正确清理
+- ✅ 交互反馈缺失 → 按钮加载状态 + Toast 通知
+- ✅ UI 不够原生 → macOS HIG 8pt grid + SF Symbols
 
-**内存轻微增长：**
-- 可能原因：Combine 订阅未释放、日志缓冲累积、Timer 未正确清理
-- 需排查：AnyCancellable 存储、Timer invalidate、循环引用
+### 技术债务
 
-**交互反馈缺失：**
-- 点击连接按钮后无加载状态
-- 成功/失败无提示
-- 错误信息技术性太强
+(无已知技术债务)
 
 ## Constraints
 
@@ -98,26 +102,18 @@ EasyTier GUI 的性能与体验优化项目。这是一个现有的 macOS 原生
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| 保持现有 MVVM 架构 | 架构合理，问题在实现细节 | — Pending |
-| 原生简洁 UI 风格 | 符合用户期望，减少过度设计 | — Pending |
-| 全面优化而非局部修复 | 多处关联，系统性解决更有效 | — Pending |
+| 保持现有 MVVM 架构 | 架构合理，问题在实现细节 | ✓ Good |
+| 原生简洁 UI 风格 | 符合用户期望，减少过度设计 | ✓ Good |
+| 全面优化而非局部修复 | 多处关联，系统性解决更有效 | ✓ Good |
+| 异步初始化 + 加载指示器 | D-01: 用户感知而非实际速度 | ✓ Good |
+| 按钮加载状态 + 禁用 | D-03/D-04: 即时反馈防止重复操作 | ✓ Good |
+| Toast 通知替代 Alert | D-05: 非阻塞错误提示 | ✓ Good |
+| 延迟权限请求 | D-02: 仅在连接时提示，减少启动干扰 | ✓ Good |
+| 日志节流 100ms | 防止 UI 过度渲染 | ✓ Good |
 
 ## Evolution
 
 This document evolves at phase transitions and milestone boundaries.
 
-**After each phase transition** (via `/gsd-transition`):
-1. Requirements invalidated? → Move to Out of Scope with reason
-2. Requirements validated? → Move to Validated with phase reference
-3. New requirements emerged? → Add to Active
-4. Decisions to log? → Add to Key Decisions
-5. "What This Is" still accurate? → Update if drifted
-
-**After each milestone** (via `/gsd-complete-milestone`):
-1. Full review of all sections
-2. Core Value check — still the right priority?
-3. Audit Out of Scope — reasons still valid?
-4. Update Context with current state
-
 ---
-*Last updated: 2025-04-24 after initialization*
+*Last updated: 2026-04-24 after v1.0 milestone*
