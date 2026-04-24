@@ -67,7 +67,7 @@ private struct LogRuntimeView: View {
     var body: some View {
         VStack(spacing: 0) {
             VStack(spacing: 0) {
-                HStack(spacing: 16) {
+                HStack(spacing: CGFloat.spacingM) {
                     if !configs.isEmpty {
                         Picker("", selection: $selectedConfigIndex) {
                             ForEach(configs.indices, id: \.self) { index in
@@ -83,8 +83,8 @@ private struct LogRuntimeView: View {
                         TextField("过滤日志消息...", text: $searchText)
                             .textFieldStyle(.plain)
                     }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
+                    .padding(.horizontal, CGFloat.spacingS)
+                    .padding(.vertical, CGFloat.spacingXS)
                     .background(Color(NSColor.controlBackgroundColor).opacity(0.5))
                     .cornerRadius(8)
                     .frame(maxWidth: 300)
@@ -114,7 +114,7 @@ private struct LogRuntimeView: View {
                     }
                     .buttonStyle(.plain)
                 }
-                .padding(20)
+                .padding(CGFloat.cardPadding)
 
                 if filteredLogs.isEmpty {
                     ContentUnavailableView(
@@ -126,14 +126,14 @@ private struct LogRuntimeView: View {
                 } else {
                     ScrollViewReader { proxy in
                         ScrollView {
-                            LazyVStack(alignment: .leading, spacing: 6) {
+                            LazyVStack(alignment: .leading, spacing: CGFloat.spacingXS) {
                                 ForEach(Array(filteredLogs.enumerated()), id: \.element.id) { index, log in
                                     LogEntryRow(entry: log, showIndex: index)
                                         .id(log.id)
                                 }
                             }
-                            .padding(.horizontal, 20)
-                            .padding(.bottom, 20)
+                            .padding(.horizontal, CGFloat.cardPadding)
+                            .padding(.bottom, CGFloat.cardPadding)
                         }
                         .onChange(of: filteredLogs.last?.id) { _, newId in
                             if autoScroll, let id = newId {
@@ -180,8 +180,8 @@ private struct LogRuntimeView: View {
                             .foregroundColor(.secondary)
                     }
                 }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 12)
+                .padding(.horizontal, CGFloat.cardPadding)
+                .padding(.vertical, CGFloat.spacingS)
                 .background(Color.black.opacity(0.1))
             }
             .background(.ultraThinMaterial)
@@ -191,8 +191,8 @@ private struct LogRuntimeView: View {
                     .stroke(Color.white.opacity(0.12), lineWidth: 1)
             )
             .shadow(color: Color.black.opacity(0.08), radius: 12, y: 4)
-            .padding(.horizontal, 24)
-            .padding(.bottom, 24)
+            .padding(.horizontal, CGFloat.spacingXL)
+            .padding(.bottom, CGFloat.spacingXL)
         }
         .onChange(of: searchText) { _, newValue in
             searchDebounceTask?.cancel()

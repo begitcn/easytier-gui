@@ -37,7 +37,7 @@ struct ConnectionView: View {
                     .padding(.vertical, 60)
                 }
             }
-            .padding(24)
+            .padding(CGFloat.spacingXL)
             .frame(maxWidth: 920)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -62,7 +62,7 @@ struct ConfigFormView: View {
     @State private var saveTask: Task<Void, Never>?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: CGFloat.spacingM) {
             HStack {
                 Text("配置设置")
                     .font(.system(.title3, design: .rounded).weight(.semibold))
@@ -139,7 +139,7 @@ struct ConfigFormView: View {
                 }
             }
         }
-        .padding(20)
+        .padding(CGFloat.cardPadding)
         .background(.ultraThinMaterial)
         .cornerRadius(20)
         .overlay(
@@ -451,7 +451,7 @@ struct ConfigListSection: View {
             .buttonStyle(.plain)
             .foregroundColor(.secondary)
         }
-        .padding(20)
+        .padding(CGFloat.cardPadding)
         .background(.ultraThinMaterial)
         .cornerRadius(20)
         .overlay(

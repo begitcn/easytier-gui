@@ -60,7 +60,7 @@ struct PeersView: View {
         VStack(spacing: 0) {
             VStack(spacing: 0) {
                 // Toolbar
-                HStack(spacing: 16) {
+                HStack(spacing: CGFloat.spacingM) {
                     if !vm.configManager.configs.isEmpty {
                         Picker("", selection: selectedConfigIndex) {
                             ForEach(vm.configManager.configs.indices, id: \.self) { index in
@@ -76,8 +76,8 @@ struct PeersView: View {
                         TextField("搜索节点内容...", text: $searchText)
                             .textFieldStyle(.plain)
                     }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
+                    .padding(.horizontal, CGFloat.spacingS)
+                    .padding(.vertical, CGFloat.spacingXS)
                     .background(Color(NSColor.controlBackgroundColor).opacity(0.5))
                     .cornerRadius(8)
                     .frame(maxWidth: 250)
@@ -102,7 +102,7 @@ struct PeersView: View {
                             .foregroundColor(.secondary)
                     }
                 }
-                .padding(20)
+                .padding(CGFloat.cardPadding)
 
                 // Peer List
                 if  filteredPeers.isEmpty && vm.activeConfig == nil {
@@ -129,7 +129,7 @@ struct PeersView: View {
                 } else {
                     VStack(spacing: 0) {
                         // 表头
-                        HStack(spacing: 16) {
+                        HStack(spacing: CGFloat.spacingM) {
                             Text("主机名")
                                 .font(.system(.caption, design: .rounded).weight(.semibold))
                                 .foregroundColor(.secondary)
@@ -159,7 +159,7 @@ struct PeersView: View {
                         // 节点列表
                         List {
                             ForEach(filteredPeers) { peer in
-                                HStack(spacing: 16) {
+                                HStack(spacing: CGFloat.spacingM) {
                                     // 主机名
                                     HStack(spacing: 4) {
                                         if peer.cost == "Local" {
