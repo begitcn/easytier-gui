@@ -65,6 +65,13 @@ class EasyTierService: ObservableObject {
     private let maxLogEntries = 100       // 最大日志条数
     private let maxLogMessageLength = 2000
 
+    // MARK: - Log Update Throttling
+
+    private var logUpdateTask: Task<Void, Never>?
+    private let logUpdateThrottleInterval: TimeInterval = 0.1 // 100ms
+    private var pendingLogLines: [String] = []
+    private let pendingLogLock = NSLock()
+
     // MARK: - Private Properties
 
     private var process: Process?
@@ -391,9 +398,39 @@ class EasyTierService: ObservableObject {
             pendingLogFragment = ""
         }
 
+        // Add lines to pending queue
+        pendingLogLock.lock()
         for line in lines where !line.trimmingCharacters(in: .whitespaces).isEmpty {
+            pendingLogLines.append(line)
+        }
+        pendingLogLock.unlock()
+
+        // Throttle UI update
+        scheduleLogUpdate()
+    }
+
+    private func scheduleLogUpdate() {
+        logUpdateTask?.cancel()
+        logUpdateTask = Task {
+            try? await Task.sleep(nanoseconds: UInt64(logUpdateThrottleInterval * 1_000_000_000))
+            guard !Task.isCancelled else { return }
+            await MainActor.run {
+                self.flushPendingLogs()
+            }
+        }
+    }
+
+    @MainActor
+    private func flushPendingLogs() {
+        pendingLogLock.lock()
+        let linesToProcess = pendingLogLines
+        pendingLogLines.removeAll()
+        pendingLogLock.unlock()
+
+        for line in linesToProcess {
             logEntries.append(parseLogLine(line))
         }
+
         if logEntries.count > maxLogEntries {
             logEntries.removeFirst(logEntries.count - maxLogEntries)
         }
