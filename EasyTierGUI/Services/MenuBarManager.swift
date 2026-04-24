@@ -88,6 +88,32 @@ class MenuBarManager: ObservableObject {
         }
     }
 
+    /// Updates menu bar icon with color based on connection status
+    func updateStatusIconColored(isRunning: Bool, hasError: Bool) {
+        guard let button = statusItem?.button else { return }
+
+        let config: String
+        let color: NSColor
+
+        if hasError {
+            config = "network.badge.shield.half.filled"
+            color = .systemRed
+        } else if isRunning {
+            config = "network.badge.shield.half.filled"
+            color = .systemGreen
+        } else {
+            config = "network"
+            color = .labelColor
+        }
+
+        if let image = NSImage(systemSymbolName: config, accessibilityDescription: "EasyTier 状态") {
+            if let coloredImage = image.withSymbolConfiguration(.init(paletteColors: [color])) {
+                button.image = coloredImage
+                button.toolTip = "EasyTier - \(hasError ? "错误" : (isRunning ? "运行中" : "未连接"))"
+            }
+        }
+    }
+
     func updateStatus(_ status: NetworkStatus, networkStatuses: [(name: String, status: NetworkStatus)] = []) {
         let snapshot = makeStatusSnapshot(status: status, networkStatuses: networkStatuses)
         if snapshot == lastStatusSnapshot {
