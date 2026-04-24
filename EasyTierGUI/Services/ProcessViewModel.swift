@@ -135,6 +135,13 @@ class ProcessViewModel: ObservableObject {
 
     @Published var status: NetworkStatus = .disconnected
     @Published private(set) var activeConfigIndex: Int = -1
+    @Published var isInitializing: Bool = true
+
+    // MARK: - Initialization Control
+
+    func completeInitialization() {
+        isInitializing = false
+    }
 
     // MARK: - Dependencies
 
