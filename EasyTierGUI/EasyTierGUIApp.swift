@@ -130,7 +130,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Clean up any orphaned easytier-core processes from previous sessions
         // (e.g., if the app crashed or was force-quit)
-        EasyTierService.cleanupOrphanedProcesses()
+        // Run asynchronously to avoid blocking main thread
+        Task {
+            await EasyTierService.cleanupOrphanedProcesses()
+            processVM?.completeInitialization()
+        }
 
         // Create menu bar icon
         MenuBarManager.shared.setupMenuBar()
