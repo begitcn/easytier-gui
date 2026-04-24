@@ -258,19 +258,28 @@ class EasyTierService: ObservableObject {
     // MARK: - Privileged Execution
 
     /// 清理所有遗留的 easytier-core 进程（应用启动时调用）
-    static func cleanupOrphanedProcesses() {
-        // 只在非 root 用户下尝试清理，root 用户可以直接 kill
-        guard getuid() != 0 else { return }
+    static func cleanupOrphanedProcesses() async {
+        await withCheckedContinuation { continuation in
+            DispatchQueue.global(qos: .userInitiated).async {
+                // 只在非 root 用户下尝试清理，root 用户可以直接 kill
+                guard getuid() != 0 else {
+                    continuation.resume()
+                    return
+                }
 
-        // 检查是否有缓存的授权，避免弹出密码框
-        guard PrivilegedSessionManager.shared.isAuthorizedCached() else {
-            // 没有授权缓存，尝试用普通用户权限清理可能存在的非特权进程
-            try? runCleanupCommandWithoutPrivilege()
-            return
+                // 检查是否有缓存的授权，避免弹出密码框
+                guard PrivilegedSessionManager.shared.isAuthorizedCached() else {
+                    // 没有授权缓存，尝试用普通用户权限清理可能存在的非特权进程
+                    try? runCleanupCommandWithoutPrivilege()
+                    continuation.resume()
+                    return
+                }
+
+                // 有授权缓存，可以清理特权进程
+                try? runCleanupCommandWithPrivilege()
+                continuation.resume()
+            }
         }
-
-        // 有授权缓存，可以清理特权进程
-        try? runCleanupCommandWithPrivilege()
     }
 
     private static func runCleanupCommandWithoutPrivilege() throws {
