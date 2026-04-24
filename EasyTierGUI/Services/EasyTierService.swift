@@ -97,6 +97,9 @@ class EasyTierService: ObservableObject {
         BinaryManager.resolveBinaryPath(for: .core).path
     }
 
+    /// Toast notification callback - set by NetworkRuntime to show crash notifications
+    var showToast: ((String) -> Void)?
+
     // MARK: - Process Control
 
     /// 启动 EasyTier 进程
@@ -141,6 +144,16 @@ class EasyTierService: ObservableObject {
         outputPipe = pipe
         process.standardOutput = pipe
         process.standardError = pipe
+
+        // Set termination handler BEFORE run() to detect crashes
+        process.terminationHandler = { [weak self] process in
+            let exitCode = process.terminationStatus
+            let reason = process.terminationReason
+
+            Task { @MainActor [weak self] in
+                await self?.handleProcessTermination(exitCode: exitCode, reason: reason)
+            }
+        }
 
         try process.run()
         self.process = process
@@ -205,11 +218,24 @@ class EasyTierService: ObservableObject {
             if allowPrivilegePrompt || PrivilegedSessionManager.shared.isAuthorizedCached() {
                 try? stopPrivileged()
             } else if let pid = privilegedPID {
-                // Best-effort non-interactive stop. This may fail with EPERM for root-owned process.
-                _ = kill(pid, SIGTERM)
-                usleep(200_000)
+                // D-03: Graceful termination with timeout (SIGTERM → wait 3s → SIGKILL)
+                // Step 1: Try graceful termination with SIGTERM
+                kill(pid, SIGTERM)
+
+                // Step 2: Wait up to 3 seconds for graceful exit
+                var waited = 0
+                while waited < 30 {  // 30 * 0.1s = 3 seconds
+                    usleep(100_000)  // 100ms
+                    if kill(pid, 0) != 0 {
+                        // Process exited gracefully
+                        break
+                    }
+                    waited += 1
+                }
+
+                // Step 3: Force kill if still running
                 if kill(pid, 0) == 0 {
-                    _ = kill(pid, SIGKILL)
+                    kill(pid, SIGKILL)
                 }
             }
         }
@@ -219,6 +245,24 @@ class EasyTierService: ObservableObject {
         privilegedLogURL = nil
         stopPrivilegedLogPolling()
         publishRunning(false)
+    }
+
+    /// 处理进程终止事件 (D-02: 区分并记录退出原因)
+    @MainActor
+    private func handleProcessTermination(exitCode: Int32, reason: Process.TerminationReason) async {
+        // Log based on exit reason
+        if exitCode == 0 {
+            log("Process exited normally", level: .info)
+        } else if reason == .uncaughtSignal {
+            log("Process terminated by signal: \(exitCode)", level: .warning)
+        } else {
+            log("Process crashed with exit code: \(exitCode)", level: .error)
+            // Notify user via Toast
+            showToast?("EasyTier 核心意外退出，请检查日志")
+        }
+
+        // Update status
+        isRunning = false
     }
 
     // MARK: - Argument Building
@@ -562,6 +606,28 @@ class EasyTierService: ObservableObject {
 
     private func publishRunning(_ running: Bool) {
         DispatchQueue.main.async { self.isRunning = running }
+    }
+
+    private func log(_ message: String, level: String) {
+        let timestamp = ISO8601DateFormatter().string(from: Date())
+        let formatted = "[\(timestamp) \(level.uppercased())] \(message)"
+        appendOutput(formatted + "\n")
+    }
+
+    /// 日志级别
+    private enum LogLevel {
+        case info, warning, error
+    }
+
+    private func log(_ message: String, level: LogLevel) {
+        switch level {
+        case .info:
+            log(message, level: "INFO")
+        case .warning:
+            log(message, level: "WARNING")
+        case .error:
+            log(message, level: "ERROR")
+        }
     }
 
     private func appendOutput(_ output: String) {

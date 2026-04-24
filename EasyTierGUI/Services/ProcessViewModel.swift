@@ -24,6 +24,7 @@ final class NetworkRuntime: ObservableObject, Identifiable {
     @Published var isDisconnecting: Bool = false
 
     var onStateChange: (() -> Void)?
+    var onToast: ((String) -> Void)?
 
     private let rpcPortalProvider: () -> Int?
     private var peerTimer: Timer?
@@ -32,6 +33,11 @@ final class NetworkRuntime: ObservableObject, Identifiable {
     init(id: UUID, rpcPortalProvider: @escaping () -> Int?) {
         self.id = id
         self.rpcPortalProvider = rpcPortalProvider
+
+        // Wire up Toast callback to EasyTierService
+        service.showToast = { [weak self] message in
+            self?.onToast?(message)
+        }
 
         // 监听服务状态变化
         service.$isRunning
@@ -52,6 +58,9 @@ final class NetworkRuntime: ObservableObject, Identifiable {
     }
 
     deinit {
+#if DEBUG
+        print("[DEBUG] NetworkRuntime deinit - id: \(id)")
+#endif
         peerTimer?.invalidate()
         peerTimer = nil
         cancellables.removeAll()
@@ -500,6 +509,10 @@ class ProcessViewModel: ObservableObject {
             Task { @MainActor in
                 self?.refreshOverallStatus()
             }
+        }
+        // Wire up Toast notifications from EasyTierService crashes
+        runtime.onToast = { [weak self] message in
+            self?.showToast(message, type: .error)
         }
         runtimes[id] = runtime
         return runtime
