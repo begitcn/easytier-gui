@@ -365,22 +365,22 @@ Polish the user interface for clarity, consistency, and native macOS design comp
 
 | Phase | Status | Requirements | Plans | Progress |
 |-------|--------|--------------|-------|----------|
-| Phase 1: 响应性与交互反馈 | 🟡 In Progress | 11 | 5 | 60% (Plan 1.3 complete) |
+| Phase 1: 响应性与交互反馈 | ✅ Complete | 11 | 5 | 100% |
 | Phase 2: 内存与稳定性 | 🔴 Not Started | 8 | 5 | 0% |
 | Phase 3: UI 优化 | 🔴 Not Started | 5 | 5 | 0% |
 
-**Total:** 24 requirements, 15 plans, 1 completed
+**Total:** 24 requirements, 15 plans, 5 completed
 
 ---
 
 ## Risk Assessment
 
-| Risk | Phase | Mitigation |
-|------|-------|------------|
-| Authorization Services timing varies | Phase 1 | Profile extensively; may need async wrapper with progress |
-| Timer cleanup from non-MainActor | Phase 2 | Dispatch to main queue in deinit |
-| Log performance with rapid output | Phase 1, 2 | Batch updates with throttle; circular buffer verified |
-| Memory leak detection difficulty | Phase 2 | Use Memory Graph Debugger; establish baseline first |
+| Risk | Phase | Mitigation | Status |
+|------|-------|------------|--------|
+| Authorization Services timing varies | Phase 1 | Profile extensively; may need async wrapper with progress | ✅ Resolved |
+| Timer cleanup from non-MainActor | Phase 2 | Dispatch to main queue in deinit | Pending |
+| Log performance with rapid output | Phase 1, 2 | Batch updates with throttle; circular buffer verified | ✅ Resolved |
+| Memory leak detection difficulty | Phase 2 | Use Memory Graph Debugger; establish baseline first | Pending |
 
 ---
 
@@ -393,4 +393,4 @@ Polish the user interface for clarity, consistency, and native macOS design comp
 ---
 
 *Roadmap created: 2025-04-24*
-*Ready for Phase 1 planning*
+*Phase 1 complete: 2026-04-24*
