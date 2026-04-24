@@ -1,5 +1,16 @@
 import SwiftUI
 
+// MARK: - Animation Constants
+
+extension Animation {
+    /// 标准动画时长: 0.25s
+    static let standard: Animation = .easeInOut(duration: 0.25)
+    /// 快速动画时长: 0.15s
+    static let quick: Animation = .easeInOut(duration: 0.15)
+    /// 慢速动画时长: 0.35s
+    static let slow: Animation = .easeInOut(duration: 0.35)
+}
+
 // MARK: - ContentView
 // Main application window with sidebar navigation
 
@@ -72,8 +83,10 @@ struct SidebarView: View {
             List(AppTab.allCases, selection: $selectedTab) { tab in
                 Label(tab.label, systemImage: tab.icon)
                     .tag(tab)
+                    .contentTransition(.symbolEffect(.replace))
             }
             .listStyle(.sidebar)
+            .animation(.standard, value: selectedTab)
         }
     }
 }
