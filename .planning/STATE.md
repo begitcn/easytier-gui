@@ -1,33 +1,32 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: Performance Optimization
+milestone: v1.1
+milestone_name: Feature Enhancement
 current_phase: null
-status: complete
-last_updated: "2026-04-24T11:00:00.000Z"
+status: defining
+last_updated: "2026-04-24T12:00:00.000Z"
 progress:
-  total_phases: 3
-  completed_phases: 3
-  total_plans: 15
-  completed_plans: 15
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State: EasyTier GUI
 
 **Last Updated:** 2026-04-24
-**Status:** Milestone Complete
+**Status:** Defining Requirements
 
 ## Status Summary
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│  EasyTier GUI - v1.0 Performance Optimization                   │
+│  EasyTier GUI - v1.1 Feature Enhancement                        │
 ├─────────────────────────────────────────────────────────────────┤
-│  Milestone: ✅ SHIPPED                                          │
-│  Phases: 3/3 complete                                           │
-│  Plans: 15/15 complete                                          │
-│  Requirements: 24/24 verified                                   │
+│  Milestone: ○ DEFINING                                          │
+│  Phases: 0/0 defined                                            │
+│  Plans: 0/0 planned                                             │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -36,19 +35,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-24)
 
 **Core value:** 程序稳定运行，交互响应及时，内存长期稳定
-**Current focus:** Planning next milestone
+**Current focus:** Defining requirements for v1.1
 
 ## Milestone History
 
 | Version | Name | Date | Phases | Status |
 |---------|------|------|--------|--------|
 | v1.0 | Performance Optimization | 2026-04-24 | 3 | ✅ Shipped |
-
-## Next Steps
-
-Run `/gsd-new-milestone` to start the next milestone.
+| v1.1 | Feature Enhancement | In Progress | — | ○ Defining |
 
 ---
-
 *State initialized: 2025-04-24*
 *v1.0 shipped: 2026-04-24*
+*v1.1 started: 2026-04-24*

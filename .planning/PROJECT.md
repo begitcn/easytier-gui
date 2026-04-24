@@ -1,8 +1,20 @@
 # EasyTier GUI 优化项目
 
+## Current Milestone: v1.1 Feature Enhancement
+
+**Goal:** Add user-requested features to enhance EasyTier GUI usability for both beginners and power users.
+
+**Target features:**
+- Config import/export — Share network configurations between machines
+- Network stats — Visualize topology, latency, bandwidth
+- Advanced settings — Protocol options, peer config, debugging
+- Auto-connect on startup — Remember and auto-start last network
+- Quick-connect shortcuts — Desktop shortcuts to specific networks
+- Settings backup/restore — Backup all configs and app settings
+
 ## What This Is
 
-EasyTier GUI 的性能与体验优化项目。这是一个 macOS 原生应用，为 EasyTier P2P VPN 提供图形界面。v1.0 已完成性能、稳定性、交互反馈、内存管理、UI 简洁度优化。
+EasyTier GUI 的功能增强版本。这是一个 macOS 原生应用，为 EasyTier P2P VPN 提供图形界面。v1.0 已完成性能优化，v1.1 将添加用户请求的新功能：配置导入导出、网络统计、高级设置、自动连接、快捷方式、备份恢复。
 
 ## Core Value
 
@@ -52,20 +64,24 @@ EasyTier GUI 的性能与体验优化项目。这是一个 macOS 原生应用，
 
 ### Active
 
-<!-- 下一里程碑的目标 -->
+<!-- v1.1 目标 -->
 
-(待定义下一里程碑)
+- [ ] **FEAT-01**: 用户可以导入/导出网络配置文件
+- [ ] **FEAT-02**: 用户可以查看网络拓扑、延迟、带宽统计
+- [ ] **FEAT-03**: 用户可以配置高级选项（协议、peer 配置、调试选项）
+- [ ] **FEAT-04**: 用户可以设置应用启动时自动连接上次网络
+- [ ] **FEAT-05**: 用户可以创建桌面快捷方式快速连接特定网络
+- [ ] **FEAT-06**: 用户可以备份/恢复应用设置和所有网络配置
 
 ### Out of Scope
 
 <!-- 明确不在本次范围内 -->
 
-- 添加新功能（如新协议支持、新 UI 页面）— 本次只优化现有功能
-- 重写整个应用 — 保持现有架构，针对性优化
+- 新协议支持 — 需要 EasyTier core 更新
 - 跨平台支持 — 仅关注 macOS
 - 国际化/本地化 — 不在本次范围
 - 单元测试覆盖 — 可作为后续工作
-- 新增功能 — v1.0 仅优化现有功能，不添加新功能
+- 重写整个应用 — 保持现有架构，增量添加功能
 
 ## Context
 
@@ -116,4 +132,4 @@ EasyTier GUI 的性能与体验优化项目。这是一个 macOS 原生应用，
 This document evolves at phase transitions and milestone boundaries.
 
 ---
-*Last updated: 2026-04-24 after v1.0 milestone*
+*Last updated: 2026-04-24 after starting v1.1 milestone*
