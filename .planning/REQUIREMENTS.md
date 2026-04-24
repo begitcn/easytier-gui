@@ -84,38 +84,56 @@ Explicitly excluded. Documented to prevent scope creep.
 
 Which phases cover which requirements. Updated during roadmap creation.
 
-| Requirement | Phase | Status |
-|-------------|-------|--------|
-| PERF-01 | Phase 1 | Pending |
-| PERF-02 | Phase 1 | Pending |
-| PERF-03 | Phase 1 | Pending |
-| PERF-04 | Phase 1 | Pending |
-| STAB-01 | Phase 2 | Pending |
-| STAB-02 | Phase 2 | Pending |
-| STAB-03 | Phase 1 | Pending |
-| STAB-04 | Phase 2 | Pending |
-| MEM-01 | Phase 2 | Pending |
-| MEM-02 | Phase 2 | Pending |
-| MEM-03 | Phase 2 | Pending |
-| MEM-04 | Phase 2 | Pending |
-| MEM-05 | Phase 2 | Pending |
-| INT-01 | Phase 1 | Pending |
-| INT-02 | Phase 1 | Pending |
-| INT-03 | Phase 1 | Pending |
-| INT-04 | Phase 1 | Pending |
-| INT-05 | Phase 1 | Pending |
-| INT-06 | Phase 1 | Pending |
-| UI-01 | Phase 3 | Pending |
-| UI-02 | Phase 3 | Pending |
-| UI-03 | Phase 3 | Pending |
-| UI-04 | Phase 3 | Pending |
-| UI-05 | Phase 3 | Pending |
+### Phase 1: 响应性与交互反馈 (11 requirements)
 
-**Coverage:**
-- v1 requirements: 24 total
-- Mapped to phases: 24
-- Unmapped: 0 ✓
+| Requirement | Description | Status |
+|-------------|-------------|--------|
+| PERF-01 | 启动时间 < 1 秒，无明显卡顿 | Pending |
+| PERF-02 | 连接/断开操作无 spinning beach ball | Pending |
+| PERF-03 | 所有耗时操作在后台队列执行 | Pending |
+| PERF-04 | 日志滚动流畅，无卡顿 | Pending |
+| STAB-03 | 权限错误有明确提示和处理 | Pending |
+| INT-01 | 连接按钮点击后立即显示加载状态 | Pending |
+| INT-02 | 断开按钮点击后立即显示加载状态 | Pending |
+| INT-03 | 操作成功有明确提示 | Pending |
+| INT-04 | 操作失败有明确提示 | Pending |
+| INT-05 | 加载状态清晰可见 | Pending |
+| INT-06 | 错误信息用户友好 | Pending |
+
+### Phase 2: 内存与稳定性 (8 requirements)
+
+| Requirement | Description | Status |
+|-------------|-------------|--------|
+| STAB-01 | 进程管理健壮，异常情况优雅处理 | Pending |
+| STAB-02 | 应用退出时无孤儿进程残留 | Pending |
+| STAB-04 | 大量日志不影响应用稳定性 | Pending |
+| MEM-01 | 长时间运行内存稳定，无明显泄漏 | Pending |
+| MEM-02 | 日志缓冲区大小可控 | Pending |
+| MEM-03 | Combine 订阅正确管理 | Pending |
+| MEM-04 | Timer 正确清理，无循环引用 | Pending |
+| MEM-05 | FileHandle 正确关闭，无资源泄漏 | Pending |
+
+### Phase 3: UI 优化 (5 requirements)
+
+| Requirement | Description | Status |
+|-------------|-------------|--------|
+| UI-01 | 界面简洁美观，遵循苹果原生设计规范 | Pending |
+| UI-02 | 信息层次分明，重点突出 | Pending |
+| UI-03 | 连接状态视觉清晰 | Pending |
+| UI-04 | 节点列表信息完整易读 | Pending |
+| UI-05 | 日志视图颜色区分，易读性好 | Pending |
+
+### Coverage Summary
+
+| Metric | Count |
+|--------|-------|
+| v1 requirements total | 24 |
+| Mapped to Phase 1 | 11 |
+| Mapped to Phase 2 | 8 |
+| Mapped to Phase 3 | 5 |
+| **Unmapped** | **0** ✓ |
 
 ---
+
 *Requirements defined: 2025-04-24*
-*Last updated: 2025-04-24 after initial definition*
+*Last updated: 2025-04-24 after roadmap creation*
