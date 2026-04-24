@@ -206,6 +206,7 @@ struct ConfigListSection: View {
     @State private var showExportAllSuccess = false
     @State private var isConnectingAll = false
     @State private var isDisconnectingAll = false
+    @State private var isAnimating = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -587,45 +588,81 @@ struct ConfigListSection: View {
         vm.showToast("「\(config.name)」连接失败：\(error)", type: .error)
     }
 
+    // MARK: - Status Badge Helpers
+
+    private func statusIcon(for status: NetworkStatus) -> String {
+        switch status {
+        case .connected: return "checkmark.circle.fill"
+        case .connecting: return "arrow.triangle.2.circlepath"
+        case .disconnected: return "circle"
+        case .error: return "exclamationmark.circle.fill"
+        }
+    }
+
+    private func statusColor(for status: NetworkStatus) -> Color {
+        switch status {
+        case .connected: return .green
+        case .connecting: return .orange
+        case .disconnected: return .secondary
+        case .error: return .red
+        }
+    }
+
+    private func statusText(for status: NetworkStatus) -> String {
+        switch status {
+        case .connected: return "运行中"
+        case .connecting: return "连接中"
+        case .disconnected: return ""
+        case .error: return "连接失败"
+        }
+    }
+
     @ViewBuilder
     private func statusBadge(for status: NetworkStatus) -> some View {
         switch status {
         case .connected:
-            HStack(spacing: 3) {
-                Circle()
-                    .fill(Color.green)
-                    .frame(width: 5, height: 5)
-                Text("运行中")
+            HStack(spacing: 4) {
+                Image(systemName: statusIcon(for: status))
+                    .font(.system(size: 8))
+                Text(statusText(for: status))
             }
             .font(.system(size: 9, weight: .medium))
             .padding(.horizontal, 6)
             .padding(.vertical, 2)
-            .background(Color.green.opacity(0.15))
-            .foregroundColor(.green)
+            .background(statusColor(for: status).opacity(0.15))
+            .foregroundColor(statusColor(for: status))
             .clipShape(Capsule())
         case .connecting:
-            HStack(spacing: 3) {
-                ProgressView()
-                    .controlSize(.mini)
-                Text("连接中")
-            }
-            .font(.system(size: 9, weight: .medium))
-            .padding(.horizontal, 6)
-            .padding(.vertical, 2)
-            .background(Color.orange.opacity(0.15))
-            .foregroundColor(.orange)
-            .clipShape(Capsule())
-        case .error:
-            HStack(spacing: 3) {
-                Image(systemName: "xmark.octagon.fill")
+            HStack(spacing: 4) {
+                Image(systemName: statusIcon(for: status))
                     .font(.system(size: 8))
-                Text("连接失败")
+                    .rotationEffect(.degrees(isAnimating ? 360 : 0))
+                    .animation(
+                        .linear(duration: 1.5)
+                        .repeatForever(autoreverses: false),
+                        value: isAnimating
+                    )
+                Text(statusText(for: status))
             }
             .font(.system(size: 9, weight: .medium))
             .padding(.horizontal, 6)
             .padding(.vertical, 2)
-            .background(Color.red.opacity(0.15))
-            .foregroundColor(.red)
+            .background(statusColor(for: status).opacity(0.15))
+            .foregroundColor(statusColor(for: status))
+            .clipShape(Capsule())
+            .onAppear { isAnimating = true }
+            .onDisappear { isAnimating = false }
+        case .error:
+            HStack(spacing: 4) {
+                Image(systemName: statusIcon(for: status))
+                    .font(.system(size: 8))
+                Text(statusText(for: status))
+            }
+            .font(.system(size: 9, weight: .medium))
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(statusColor(for: status).opacity(0.15))
+            .foregroundColor(statusColor(for: status))
             .clipShape(Capsule())
         case .disconnected:
             EmptyView()
