@@ -281,10 +281,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             try PrivilegedSessionManager.shared.ensureAuthorized()
         } catch {
             print("Failed to authorize current session: \(error)")
-            showAuthorizationError(message: error.localizedDescription)
+            Task { @MainActor in
+                showAuthorizationError(message: error.localizedDescription)
+            }
         }
     }
 
+    @MainActor
     private func showAuthorizationError(message: String? = nil) {
         // Use toast notification instead of blocking NSAlert
         let defaultMessage = "需要管理员权限来创建虚拟网络设备。\n\n您可以：\n• 点击「重试」重新授权\n• 使用终端启动: sudo EasyTierGUI"
