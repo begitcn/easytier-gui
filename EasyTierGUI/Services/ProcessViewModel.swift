@@ -353,6 +353,7 @@ class ProcessViewModel: ObservableObject {
         guard easytierCoreExists else {
             runtime.errorMessage = "未找到 easytier-core，请在设置中配置正确的 EasyTier 目录。"
             runtime.status = .error
+            showToast("未找到 easytier-core，请在设置中配置正确的 EasyTier 目录。", type: .error)
             refreshOverallStatus()
             return
         }
@@ -381,6 +382,14 @@ class ProcessViewModel: ObservableObject {
 
         await runtime.connect(config: config)
         refreshOverallStatus()
+
+        // Show toast with retry for authorization errors
+        if runtime.status == .error, let error = runtime.errorMessage, error.contains("授权") || error.contains("权限") {
+            showToast(error, type: .error, action: ToastAction(title: "重试") { [weak self] in
+                guard let self = self else { return }
+                Task { await self.connect(configID: configID) }
+            })
+        }
     }
 
     func disconnect(configID: UUID) async {
@@ -395,6 +404,20 @@ class ProcessViewModel: ObservableObject {
             await disconnect(configID: config.id)
         } else {
             await connect(configID: config.id)
+        }
+    }
+
+    // MARK: - Authorization
+
+    var isAuthorized: Bool {
+        PrivilegedSessionManager.shared.isAuthorizedCached()
+    }
+
+    func requestAuthorization() {
+        do {
+            try PrivilegedSessionManager.shared.ensureAuthorized()
+        } catch {
+            showToast("授权失败：\(error.localizedDescription)", type: .error)
         }
     }
 

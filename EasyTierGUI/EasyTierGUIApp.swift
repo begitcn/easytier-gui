@@ -267,9 +267,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Check if running as root (uid 0)
         let uid = getuid()
         if uid != 0 {
-            // Not running as root, directly request authorization (will show password dialog)
+            // Silently cache authorization status without showing prompt
+            // User will see authorization dialog when they try to connect
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                self.authorizeCurrentSession()
+                // Just check if we have cached authorization, don't prompt
+                _ = PrivilegedSessionManager.shared.isAuthorizedCached()
             }
         }
     }
@@ -284,25 +286,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func showAuthorizationError(message: String? = nil) {
-        DispatchQueue.main.async {
-            let alert = NSAlert()
-            alert.messageText = "授权失败"
-            alert.informativeText = """
-            \(message ?? "无法获取管理员权限。")\n
-            请尝试以下方式：
+        // Use toast notification instead of blocking NSAlert
+        let defaultMessage = "需要管理员权限来创建虚拟网络设备。\n\n您可以：\n• 点击「重试」重新授权\n• 使用终端启动: sudo EasyTierGUI"
 
-            1. 从终端运行：
-               sudo /Applications/EasyTierGUI.app/Contents/MacOS/EasyTierGUI
-
-            2. 使用启动脚本：
-               ./launch-easytier-gui.sh
-
-            详细说明请参考 RUN-WITH-SUDO.md 文档。
-            """
-            alert.alertStyle = .critical
-            alert.addButton(withTitle: "知道了")
-            alert.runModal()
-        }
+        processVM?.showToast(
+            message ?? defaultMessage,
+            type: .error,
+            action: ToastAction(title: "重试") { [weak self] in
+                self?.authorizeCurrentSession()
+            }
+        )
     }
 
 }
