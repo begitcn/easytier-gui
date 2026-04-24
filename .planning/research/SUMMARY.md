@@ -1,135 +1,144 @@
 # Project Research Summary
 
-**Project:** EasyTier GUI Performance Optimization
-**Domain:** Swift/SwiftUI macOS Desktop Application Performance Optimization
-**Researched:** 2025-04-24
+**Project:** EasyTier GUI v1.1 Feature Enhancement
+**Domain:** macOS VPN Network Management Application
+**Researched:** 2026-04-24
 **Confidence:** HIGH
 
 ## Executive Summary
 
-EasyTier GUI is a native macOS SwiftUI application providing a graphical interface for EasyTier, a P2P VPN networking tool. The research reveals that the current architecture follows solid patterns (MainActor isolation on ViewModels, background queue offloading for I/O, bounded log buffers), but several optimization opportunities exist around startup responsiveness, memory stability, and UI feedback states.
-
-The recommended approach focuses on two phases: first addressing main thread responsiveness and UI polish (loading states, error feedback), then ensuring long-term memory stability through proper cleanup patterns. The codebase already implements many best practices, reducing risk and implementation effort.
-
-Key risks include: timer retain cycles if `deinit` cleanup is missed, main thread blocking during privileged execution if continuation patterns are not followed, and subscription accumulation if Combine patterns are inconsistent.
+EasyTier GUI is a native macOS VPN management application that provides a graphical interface for EasyTier (a P2P VPN tool). The v1.1 enhancement focuses on adding productivity features that users expect from any network management app. Research indicates the recommended approach uses native Apple frameworks (Swift Charts, SMAppService, NSWorkspace) to implement config import/export, auto-connect on startup, and network statistics visualization. The key risk is implementing features without proper validation and security measures—particularly around credential handling in config exports and URL scheme security for quick-connect features. Following the phased implementation plan will mitigate these risks while delivering features in priority order.
 
 ## Key Findings
 
 ### Recommended Stack
 
-Swift 5.9 with SwiftUI + AppKit hybrid architecture, leveraging Swift Concurrency (async/await, @MainActor) for thread safety. Instruments remains the primary profiling tool, with Xcode Memory Graph Debugger for leak detection. Combine framework handles reactive bindings with proper AnyCancellable lifecycle management.
-
 **Core technologies:**
-- **Swift Concurrency (@MainActor, async/await):** Structured concurrency for thread-safe UI updates — eliminates race conditions on ObservableObject state
-- **DispatchQueue (background queues):** Offload blocking I/O operations — prevents main thread stalls during process execution and file operations
-- **Combine (AnyCancellable, @Published):** Reactive state management — automatic UI updates with explicit subscription lifecycle control
+- **Swift Charts** — Network stats visualization (bandwidth, latency, topology) — Native Apple framework, no external dependencies, optimized for SwiftUI on macOS 14+
+- **SMAppService** — Auto-connect on startup (Login Items) — Official Apple API replacing deprecated LSSharedFileList, macOS 13+ support
+- **NSWorkspace** — Quick-connect desktop shortcuts — Native AppKit for creating app aliases or opening URLs programmatically
+- **FileWrapper** — Backup/restore with directory structures — Foundation framework for comprehensive backup handling
+
+No external libraries required—all features use native Apple frameworks already compatible with the project's macOS 14.0 minimum target.
 
 ### Expected Features
 
-Users expect macOS native apps to be responsive, memory-stable, and polished. Performance optimization work should prioritize table stakes features before advanced differentiators.
-
 **Must have (table stakes):**
-- Main thread responsiveness — UI never freezes, no spinning beach ball during connect/disconnect
-- Loading states on all actions — immediate visual acknowledgment when user triggers operations
-- Proper error feedback — user-friendly messages, not technical stack traces
-- Memory stability — app runs indefinitely without memory growth or leaks
-- Clean shutdown — no orphan processes, timers properly invalidated
+- **Config import/export** — Share configs between machines, create backups — Already partially implemented in ConfigManager, needs UI enhancement
+- **Auto-connect on startup** — Convenience for always-on VPN — Uses SMAppService, needs integration with Settings
+- **Settings backup/restore** — Full config portability — Reuses import/export, extends to include app preferences
 
 **Should have (competitive):**
-- Animation polish — smooth state transitions with SwiftUI `withAnimation`
-- Background task coalescing — batch periodic work to minimize CPU wakeups
-- Memory warning handling — respond to system pressure, purge caches
+- **Network statistics** — Show latency, bandwidth, peer count — Requires easytier-cli integration with periodic polling
+- **Advanced settings** — Power user customization (protocol, logging, MTU) — Extends existing EasyTierConfig model
+- **Quick-connect menu** — One-click connect from menu bar — Uses NSWorkspace and URL scheme
 
 **Defer (v2+):**
-- Speculative prefetching — pre-load data for instant response
-- Energy profiling — minimize CPU/battery usage when idle
+- Bandwidth visualization (sparkline graph) — High complexity, lower user value
+- Network topology visualization — Requires extensive CLI integration
+- Desktop aliases for quick connect — macOS doesn't have native desktop shortcuts
 
 ### Architecture Approach
 
-MVVM pattern with clear layer separation: SwiftUI Views bound to @MainActor ViewModels via @EnvironmentObject, ViewModels coordinate with non-MainActor Services for I/O operations. Process management uses continuation pattern for bridging synchronous privileged execution to async context.
+The recommended architecture extends the existing MVVM pattern by adding three new service classes accessed via ProcessViewModel:
+1. **NetworkStatsService** — Timer-based polling of easytier-cli for latency/bandwidth data, publishes to views via @Published
+2. **BackupService** — Full backup/restore using JSON archive format with versioning metadata
+3. **QuickConnectService** — URL scheme handling for desktop shortcuts (`easytiergui://connect?config=<uuid>`)
 
-**Major components:**
-1. **ProcessViewModel (@MainActor)** — Main coordinator managing multiple NetworkRuntime instances, aggregates status for UI and menu bar
-2. **NetworkRuntime (@MainActor)** — Per-network state machine with peer polling timer, manages connection lifecycle
-3. **EasyTierService (non-MainActor)** — Process lifecycle management, log parsing, CLI interaction on background queues
+New components include NetworkStats.swift and BackupManifest.swift models, plus StatsView.swift and BackupPanel.swift view components. The existing ConfigManager already has import/export methods (lines 152-176) that should be reused rather than duplicated.
 
 ### Critical Pitfalls
 
-1. **Main Thread Blocking During Process Spawn** — Never call `Process.run()` or `PrivilegedExecutor.runCommand()` directly from UI code; wrap in `withCheckedThrowingContinuation` with background queue dispatch
-2. **Timer Retain Cycles** — Always use `[weak self]` in timer closures and invalidate timers in `deinit`; `deinit` cannot be actor-isolated, so dispatch cleanup to main queue if needed
-3. **Combine Subscription Accumulation** — Create subscriptions once in `init()`, not in methods that may be called multiple times; always store in `Set<AnyCancellable>`
-4. **Log/Array Unbounded Growth** — Implement circular buffer pattern; current `maxLogEntries = 100` is correct, verify all arrays have bounds
-5. **DispatchQueue.main.async Overuse in @MainActor** — Redundant and can cause ordering issues; trust @MainActor isolation
+1. **Config Export Includes Sensitive Data** — Exporting configs with plaintext passwords/tokens exposes credentials. **How to avoid:** Mark sensitive fields, implement Codable that redacts for export, add "Include credentials" toggle defaulting to off.
+
+2. **Real-time Stats Polling Causes Performance Degradation** — Polling too frequently (e.g., 100ms) exhausts CPU and causes UI stuttering. **How to avoid:** Use 1-2 second polling interval, batch all stat queries into single CLI call, use Combine throttling.
+
+3. **Stats Display Shows Stale Data Without Indication** — UI shows old values when disconnected without visual feedback. **How to avoid:** Display "last updated" timestamp, show disconnected state with dimmed stats, use color indicators for stale data.
+
+4. **Config Import Without Schema Validation** — Importing invalid JSON crashes app or causes undefined behavior. **How to avoid:** Validate schema version, check required fields, provide clear error messages.
+
+5. **Auto-connect Runs Before Network is Ready** — App launches at login and immediately fails because network interfaces aren't ready. **How to avoid:** Add 3-5 second delay before auto-connect, monitor network availability, show "Waiting for network..." status.
 
 ## Implications for Roadmap
 
 Based on research, suggested phase structure:
 
-### Phase 1: Startup & Responsiveness
-**Rationale:** User-perceived performance depends on immediate UI responsiveness. Main thread blocking and missing loading states create the impression of a slow or broken app.
-**Delivers:** No beach balls, immediate visual feedback on all actions, responsive UI during all operations
-**Addresses:** Main thread responsiveness, loading states, error feedback (from FEATURES.md table stakes)
-**Avoids:** Main thread blocking during process spawn, NSAlert.runModal() blocking (from PITFALLS.md)
+### Phase 1: Config Foundation
+**Rationale:** Config import/export is the foundation for backup/restore and uses existing ConfigManager code—lowest implementation cost with highest user value.
+**Delivers:** Config export/import UI with file picker, schema validation, sensitive data redaction
+**Addresses:** FEAT-01 (Config import/export)
+**Avoids:** Pitfall #1 (schema validation), Pitfall #2 (sensitive data exposure)
 
-### Phase 2: Memory Stability
-**Rationale:** Memory issues accumulate over time and are harder to debug later. Establishing proper cleanup patterns early prevents technical debt.
-**Delivers:** Stable memory footprint over extended use, proper resource cleanup on shutdown
-**Uses:** AnyCancellable patterns, Timer invalidation, weak self captures (from STACK.md)
-**Implements:** Subscription cleanup, bounded data structures, timer lifecycle management
+### Phase 2: Network Statistics
+**Rationale:** Stats visualization requires new service layer and CLI integration—most complex feature, should be validated early.
+**Delivers:** NetworkStats model, NetworkStatsService with 2-second polling, StatsView with peer latency display
+**Addresses:** FEAT-02 (Peer list with latency), FEAT-02 (Connection status with peer count)
+**Avoids:** Pitfall #3 (polling performance), Pitfall #4 (stale data)
 
-### Phase 3: Polish & Advanced Optimization
-**Rationale:** After core stability, polish features improve perceived quality and competitive positioning.
-**Delivers:** Smooth animations, efficient background processing, memory pressure handling
-**Addresses:** Animation polish, background task coalescing (from FEATURES.md differentiators)
+### Phase 3: Auto-Connect & Backup
+**Rationale:** Both use UserDefaults persistence—complementary implementations, share preferences storage pattern.
+**Delivers:** Auto-connect toggle in Settings using SMAppService, settings backup/restore with BackupService
+**Addresses:** FEAT-04 (Auto-connect), FEAT-06 (Settings backup/restore)
+**Avoids:** Pitfall #5 (network not ready), Pitfall #10 (backup excludes state), Pitfall #12 (restore overwrite)
+
+### Phase 4: Advanced Settings & Quick Connect
+**Rationale:** Power user features that enhance usability but have security considerations requiring careful implementation.
+**Delivers:** Advanced settings UI (protocol, logging, MTU), menu bar quick-connect menu, URL scheme registration
+**Addresses:** FEAT-03 (Advanced settings UI), FEAT-05 (Quick-connect menu)
+**Avoids:** Pitfall #6 (debug options exposed), Pitfall #8 (URL scheme collision), Pitfall #9 (no confirmation)
 
 ### Phase Ordering Rationale
 
-- Phase 1 addresses immediate user perception — a responsive app feels fast even if memory isn't optimal
-- Phase 2 ensures long-term stability — memory leaks compound over time and are harder to fix post-launch
-- Phase 3 adds competitive polish — valuable but not blocking for acceptable user experience
-- This order follows the principle: "first make it work correctly, then make it work efficiently, then make it delightful"
+- **Phase 1 first:** Uses existing ConfigManager code, lowest risk, foundation for backup/restore
+- **Phase 2 before Phase 3:** Stats service provides data for potential future features; backup is simpler without stats integration
+- **Phase 3 before Phase 4:** Auto-connect and backup have fewer security concerns than URL scheme handling
+- **Phase 4 last:** Quick-connect has highest security implications (Pitfall #8, #9) and requires careful implementation
 
 ### Research Flags
 
 Phases likely needing deeper research during planning:
-- **Phase 1:** Authorization Services integration complexity — OS handles async dialog but timing varies; may need additional profiling to verify no main thread stalls during auth prompts
-- **Phase 3:** Energy profiling methodology — Instruments Energy Log requires specific setup; may need dedicated research on macOS energy measurement
+- **Phase 2 (Network Statistics):** Need to verify easytier-cli commands actually return expected JSON format—project source shows CLI exists but exact output format not confirmed
+- **Phase 4 (Quick Connect):** URL scheme security requires careful validation of URL parameters to prevent command injection
 
 Phases with standard patterns (skip research-phase):
-- **Phase 2:** Memory management patterns well-documented; AnyCancellable, Timer, and weak reference patterns are standard Swift/Combine
+- **Phase 1:** File picker, JSON serialization—well-documented Apple patterns
+- **Phase 3:** SMAppService, backup/restore—standard macOS patterns with clear documentation
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | Swift Concurrency, Combine, and GCD patterns are well-documented by Apple and community |
-| Features | HIGH | Table stakes clearly defined by macOS user expectations; differentiators mapped to implementation complexity |
-| Architecture | HIGH | Current codebase follows MVVM + MainActor pattern correctly; optimization paths are incremental improvements |
-| Pitfalls | HIGH | Pitfalls identified in codebase with specific line references; mitigation patterns are standard |
+| Stack | HIGH | Native Apple frameworks with clear documentation, all compatible with macOS 14+ |
+| Features | HIGH | VPN app industry patterns well-established, EasyTier CLI capabilities verified in project source |
+| Architecture | HIGH | Follows existing MVVM pattern, adds services following single-responsibility principle |
+| Pitfalls | HIGH | Based on common VPN app issues, Apple platform patterns, and existing codebase analysis |
 
 **Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **Startup time measurement:** No baseline launch time measurement exists; establish benchmark before optimization. Handle by adding Instruments Time Profiler measurement to Phase 1 kickoff.
-- **Memory warning handling:** macOS memory pressure handling not implemented. Address in Phase 3 if memory stability monitoring indicates need.
-- **Energy profiling:** Energy efficiency not measured. Consider dedicated research phase if battery/thermal issues reported by users.
+- **easy tier-cli JSON output format:** Need to verify actual command output structure during Phase 2 implementation—may need to adjust parsing logic
+  - **How to handle:** Create mock data based on project source, validate against actual CLI during integration testing
+
+- **Backup file encryption:** Current plan uses plain JSON—may want password-protected backup for security-conscious users
+  - **How to handle:** Start with plain JSON (MVP), add encryption as post-launch enhancement
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- Apple Developer Documentation — Swift Concurrency, MainActor, Combine, Timer memory management
-- WWDC Sessions (2020-2024) — SwiftUI Performance, Swift Concurrency patterns
-- Current codebase analysis — ARCHITECTURE.md, STACK.md patterns verified in source
+- Apple Swift Charts Documentation — https://developer.apple.com/documentation/charts
+- Apple SMAppService Documentation — https://developer.apple.com/documentation/servicemanagement
+- Apple NSWorkspace Documentation — https://developer.apple.com/documentation/appkit/nsworkspace
+- EasyTier GUI v1.0 codebase — ConfigManager.swift (import/export), ProcessViewModel.swift, EasyTierService.swift
 
 ### Secondary (MEDIUM confidence)
-- Hacking with Swift — Swift Concurrency guide, @StateObject vs @ObservedObject
-- SwiftLee — MainActor usage patterns, DispatchQueue best practices
-- Swift by Sundell — Combine memory management patterns
+- WireGuard documentation — `wg show` CLI interface patterns
+- OpenVPN configuration profile format — Industry standard for VPN config files
+- WWDC 2023: SwiftUI Performance Best Practices — Polling optimization guidance
 
 ### Tertiary (LOW confidence)
-- Personal experience with SwiftUI macOS optimization — general patterns applied to this specific domain
+- EasyTier CLI interface — Based on project source analysis, exact JSON output format needs verification during implementation
 
 ---
-*Research completed: 2025-04-24*
+*Research completed: 2026-04-24*
 *Ready for roadmap: yes*
