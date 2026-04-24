@@ -173,6 +173,9 @@ class EasyTierService: ObservableObject {
             guard shouldStopPrivilegedProcess else {
                 stopPrivilegedLogPolling()
                 publishRunning(false)
+#if DEBUG
+                verifyCleanup()
+#endif
                 return
             }
             try stopPrivileged()
@@ -180,6 +183,9 @@ class EasyTierService: ObservableObject {
             privilegedLogURL = nil
             stopPrivilegedLogPolling()
             publishRunning(false)
+#if DEBUG
+            verifyCleanup()
+#endif
             return
         }
 
@@ -187,6 +193,9 @@ class EasyTierService: ObservableObject {
         guard let process = process, process.isRunning else {
             self.process = nil
             publishRunning(false)
+#if DEBUG
+            verifyCleanup()
+#endif
             return
         }
 
@@ -202,6 +211,9 @@ class EasyTierService: ObservableObject {
         privilegedLogURL = nil
         stopPrivilegedLogPolling()
         publishRunning(false)
+#if DEBUG
+        verifyCleanup()
+#endif
     }
 
     /// 强制停止进程
@@ -245,9 +257,10 @@ class EasyTierService: ObservableObject {
         privilegedLogURL = nil
         stopPrivilegedLogPolling()
         publishRunning(false)
+#if DEBUG
+        verifyCleanup()
+#endif
     }
-
-    /// 处理进程终止事件 (D-02: 区分并记录退出原因)
     @MainActor
     private func handleProcessTermination(exitCode: Int32, reason: Process.TerminationReason) async {
         // Log based on exit reason
@@ -540,7 +553,7 @@ class EasyTierService: ObservableObject {
         task.standardOutput = pipe
         task.standardError = pipe
 
-        peerFetchQueue.async {
+        peerFetchQueue.async { [weak self] in
             do {
                 try task.run()
 
@@ -555,13 +568,19 @@ class EasyTierService: ObservableObject {
                     task.terminate()
                     _ = waitGroup.wait(timeout: .now() + 1.0)
                     self.finishPeerFetch([], completion: completion)
+                    // Clean up pipe
+                    pipe.fileHandleForReading.readabilityHandler = nil
                     return
                 }
 
                 let data = pipe.fileHandleForReading.readDataToEndOfFile()
                 self.finishPeerFetch(self.decodePeers(from: data), completion: completion)
+                // Clean up pipe
+                pipe.fileHandleForReading.readabilityHandler = nil
             } catch {
                 self.finishPeerFetch([], completion: completion)
+                // Clean up pipe
+                pipe.fileHandleForReading.readabilityHandler = nil
             }
         }
     }
@@ -666,6 +685,13 @@ class EasyTierService: ObservableObject {
     // MARK: - Deinitialization
 
 #if DEBUG
+    /// 验证资源清理（调试用）
+    private func verifyCleanup() {
+        assert(outputPipe == nil, "outputPipe not cleaned up!")
+        assert(process == nil, "process not cleaned up!")
+        print("[DEBUG] EasyTierService cleanup verified - privilegedPID: \(privilegedPID ?? -1)")
+    }
+
     deinit {
         print("[DEBUG] EasyTierService deinit - \(privilegedPID != nil ? "privileged" : "normal")")
     }
