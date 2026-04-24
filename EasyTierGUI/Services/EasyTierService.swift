@@ -597,6 +597,20 @@ class EasyTierService: ObservableObject {
         return false
     }
 
+    // MARK: - Deinitialization
+
+#if DEBUG
+    deinit {
+        print("[DEBUG] EasyTierService deinit - \(privilegedPID != nil ? "privileged" : "normal")")
+    }
+#endif
+
+    deinit {
+        // Clean up timer if still running
+        privilegedLogTimer?.invalidate()
+        privilegedLogTimer = nil
+    }
+
     // MARK: - Privileged Log Polling
 
     private func startPrivilegedLogPolling(logURL: URL) {

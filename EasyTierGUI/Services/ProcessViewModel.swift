@@ -109,6 +109,9 @@ final class NetworkRuntime: ObservableObject, Identifiable {
     private func stopPeerPolling() {
         peerTimer?.invalidate()
         peerTimer = nil
+#if DEBUG
+        print("[DEBUG] Timer invalidated for runtime: \(id)")
+#endif
     }
 
     private func fetchPeers() {
