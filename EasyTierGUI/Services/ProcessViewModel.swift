@@ -145,6 +145,26 @@ class ProcessViewModel: ObservableObject {
     @Published private(set) var activeConfigIndex: Int = -1
     @Published var isInitializing: Bool = true
 
+    // MARK: - Toast Management
+
+    @Published var toastMessage: ToastMessage?
+
+    func showToast(_ text: String, type: ToastType = .error, action: ToastAction? = nil) {
+        toastMessage = ToastMessage(text: text, type: type, action: action)
+
+        // Auto-dismiss after 3 seconds
+        Task {
+            try? await Task.sleep(nanoseconds: 3_000_000_000)
+            if toastMessage?.text == text {
+                toastMessage = nil
+            }
+        }
+    }
+
+    func dismissToast() {
+        toastMessage = nil
+    }
+
     // MARK: - Initialization Control
 
     func completeInitialization() {

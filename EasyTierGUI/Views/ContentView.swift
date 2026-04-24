@@ -16,6 +16,7 @@ struct ContentView: View {
             DetailView(selectedTab: selectedTab)
         }
         .navigationTitle("EasyTier")
+        .toast(message: $vm.toastMessage)
     }
 }
 

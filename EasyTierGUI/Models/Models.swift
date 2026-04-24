@@ -183,3 +183,28 @@ struct LogEntry: Identifiable {
         }
     }
 }
+
+// MARK: - Toast Message
+
+/// Toast 通知消息
+struct ToastMessage: Identifiable, Equatable {
+    let id = UUID()
+    let text: String
+    let type: ToastType
+    var action: ToastAction?
+
+    static func == (lhs: ToastMessage, rhs: ToastMessage) -> Bool {
+        lhs.id == rhs.id
+    }
+}
+
+enum ToastType {
+    case error
+    case warning
+    case info
+}
+
+struct ToastAction {
+    let title: String
+    let handler: () -> Void
+}

@@ -204,8 +204,6 @@ struct ConfigListSection: View {
     @State private var showImportError = false
     @State private var importErrorMessage = ""
     @State private var showExportAllSuccess = false
-    @State private var showConnectErrorAlert = false
-    @State private var connectErrorMessage = ""
     @State private var isConnectingAll = false
     @State private var isDisconnectingAll = false
 
@@ -481,11 +479,6 @@ struct ConfigListSection: View {
         } message: {
             Text("所有配置已成功导出")
         }
-        .alert("连接失败", isPresented: $showConnectErrorAlert) {
-            Button("好的", role: .cancel) {}
-        } message: {
-            Text(connectErrorMessage)
-        }
     }
 
     // MARK: - Import/Export Methods
@@ -591,8 +584,7 @@ struct ConfigListSection: View {
         guard let error = vm.errorMessage(for: config), !error.isEmpty else {
             return
         }
-        connectErrorMessage = "「\(config.name)」连接失败：\n\(error)"
-        showConnectErrorAlert = true
+        vm.showToast("「\(config.name)」连接失败：\(error)", type: .error)
     }
 
     @ViewBuilder
