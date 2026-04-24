@@ -23,13 +23,29 @@ struct ContentView: View {
 
 struct SidebarView: View {
     @Binding var selectedTab: AppTab
+    @EnvironmentObject var vm: ProcessViewModel
 
     var body: some View {
-        List(AppTab.allCases, selection: $selectedTab) { tab in
-            Label(tab.label, systemImage: tab.icon)
-                .tag(tab)
+        VStack(spacing: 0) {
+            if vm.isInitializing {
+                HStack(spacing: 8) {
+                    ProgressView()
+                        .controlSize(.small)
+                    Text("初始化中...")
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                }
+                .padding(.vertical, 8)
+                .frame(maxWidth: .infinity)
+                .background(Color(NSColor.controlBackgroundColor).opacity(0.5))
+            }
+
+            List(AppTab.allCases, selection: $selectedTab) { tab in
+                Label(tab.label, systemImage: tab.icon)
+                    .tag(tab)
+            }
+            .listStyle(.sidebar)
         }
-        .listStyle(.sidebar)
     }
 }
 
