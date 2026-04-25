@@ -157,6 +157,15 @@ struct PeerInfo: Identifiable, Equatable {
     var tunnelProto: String?  // 隧道协议
     var location: String?     // 地理位置
 
+    // MARK: - Phase 5: Network Statistics
+    var lastUpdated: Date?    // 最后更新时间（用于过期检测）
+
+    /// 判定节点是否已过期（超过 10 秒未更新）
+    var isStale: Bool {
+        guard let lastUpdated = lastUpdated else { return false }
+        return Date().timeIntervalSince(lastUpdated) > 10
+    }
+
     /// 节点在线状态
     enum PeerStatus: String, Equatable {
         case online, offline
