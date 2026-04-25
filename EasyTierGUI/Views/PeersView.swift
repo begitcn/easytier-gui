@@ -126,12 +126,15 @@ struct PeersView: View {
                     )
                     .frame(maxHeight: .infinity)
                 } else if filteredPeers.isEmpty && !(vm.activeRuntime?.service.isRunning ?? false) {
-                    ContentUnavailableView(
-                        "未连接网络",
-                        systemImage: "network.slash",
-                        description: Text("启动 EasyTier 以查看已连接的节点")
-                    )
-                    .frame(maxHeight: .infinity)
+                    // Show empty state only if there are truly no peers (not even stale ones)
+                    if vm.peers.isEmpty {
+                        ContentUnavailableView(
+                            "未连接网络",
+                            systemImage: "network.slash",
+                            description: Text("启动 EasyTier 以查看已连接的节点")
+                        )
+                        .frame(maxHeight: .infinity)
+                    }
                 } else if filteredPeers.isEmpty {
                     ContentUnavailableView(
                         "未找到节点",
@@ -275,6 +278,19 @@ struct PeersView: View {
         .padding(.vertical, 4)
         .padding(.horizontal, 8)
         .contentShape(Rectangle())
+        .opacity(peer.isStale ? 0.5 : 1.0)  // Gray out stale peers
+        .overlay(alignment: .topTrailing) {  // NEW: Stale indicator label
+            if peer.isStale {
+                Text("已断开")
+                    .font(.caption2)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Color.gray.opacity(0.8))
+                    .foregroundColor(.white)
+                    .clipShape(Capsule())
+                    .offset(x: 8, y: -4)
+            }
+        }
         .hoverEffect()
         .listRowBackground(
             isLocal ? Color.accentColor.opacity(0.12) : Color.clear
