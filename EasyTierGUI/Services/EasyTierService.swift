@@ -170,15 +170,15 @@ class EasyTierService: ObservableObject {
 
         // 停止特权进程
         if getuid() != 0, process == nil {
-            guard shouldStopPrivilegedProcess else {
-                stopPrivilegedLogPolling()
-                publishRunning(false)
-#if DEBUG
-                verifyCleanup()
-#endif
-                return
+            // 总是尝试停止特权进程，即使 shouldStopPrivilegedProcess 返回 false
+            // 因为进程可能仍在运行（端口占用问题）
+            if let pid = privilegedPID {
+                // 先检查进程是否还在运行
+                let isRunning = kill(pid, 0) == 0 || errno == EPERM
+                if isRunning {
+                    try stopPrivileged()
+                }
             }
-            try stopPrivileged()
             privilegedPID = nil
             privilegedLogURL = nil
             stopPrivilegedLogPolling()
@@ -321,12 +321,14 @@ class EasyTierService: ObservableObject {
 
     // MARK: - Privileged Execution
 
-    /// 清理所有遗留的 easytier-core 进程（应用启动时调用）
+    /// 清理所有遗留的 easytier-core/easytier-cli 进程（应用启动和退出时调用）
     static func cleanupOrphanedProcesses() async {
         await withCheckedContinuation { continuation in
             DispatchQueue.global(qos: .userInitiated).async {
                 // 只在非 root 用户下尝试清理，root 用户可以直接 kill
                 guard getuid() != 0 else {
+                    // root 用户直接用 pkill 清理
+                    try? runCleanupCommandAsRoot()
                     continuation.resume()
                     return
                 }
@@ -349,16 +351,25 @@ class EasyTierService: ObservableObject {
     private static func runCleanupCommandWithoutPrivilege() throws {
         let task = Process()
         task.executableURL = URL(fileURLWithPath: "/usr/bin/pkill")
-        task.arguments = ["-f", "easytier-core"]
+        task.arguments = ["-f", "easytier-(core|cli)"]
         try? task.run()
         task.waitUntilExit()
     }
 
     private static func runCleanupCommandWithPrivilege() throws {
         _ = try? PrivilegedSessionManager.shared.run(
-            command: "pkill -9 -f 'easytier-core' 2>/dev/null || true; pkill -9 -f 'etgui-' 2>/dev/null || true; echo cleaned",
+            command: "pkill -9 -f 'easytier-core' 2>/dev/null || true; pkill -9 -f 'easytier-cli' 2>/dev/null || true; pkill -9 -f 'etgui-' 2>/dev/null || true; echo cleaned",
             timeout: 3
         )
+    }
+
+    private static func runCleanupCommandAsRoot() throws {
+        // root 用户直接运行 pkill，不需要特权授权
+        let task = Process()
+        task.executableURL = URL(fileURLWithPath: "/usr/bin/pkill")
+        task.arguments = ["-9", "-f", "easytier-(core|cli)"]
+        try? task.run()
+        task.waitUntilExit()
     }
 
     /// 以特权模式启动进程
@@ -685,6 +696,15 @@ class EasyTierService: ObservableObject {
 
     // MARK: - Deinitialization
 
+    deinit {
+        // Clean up timer if still running
+        privilegedLogTimer?.invalidate()
+        privilegedLogTimer = nil
+#if DEBUG
+        print("[DEBUG] EasyTierService deinit - \(privilegedPID != nil ? "privileged" : "normal")")
+#endif
+    }
+
 #if DEBUG
     /// 验证资源清理（调试用）
     private func verifyCleanup() {
@@ -692,17 +712,7 @@ class EasyTierService: ObservableObject {
         assert(process == nil, "process not cleaned up!")
         print("[DEBUG] EasyTierService cleanup verified - privilegedPID: \(privilegedPID ?? -1)")
     }
-
-    deinit {
-        print("[DEBUG] EasyTierService deinit - \(privilegedPID != nil ? "privileged" : "normal")")
-    }
 #endif
-
-    deinit {
-        // Clean up timer if still running
-        privilegedLogTimer?.invalidate()
-        privilegedLogTimer = nil
-    }
 
     // MARK: - Privileged Log Polling
 

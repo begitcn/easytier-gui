@@ -1,217 +1,410 @@
-# Feature Research
+# Feature Research: v1.1 Enhancement Features
 
-**Domain:** Swift/SwiftUI macOS Performance Optimization
-**Researched:** 2025-04-24
-**Confidence:** HIGH
+**Domain:** EasyTier GUI v1.1 - Network Configuration & Productivity Features
+**Researched:** 2026-04-24
+**Confidence:** HIGH (based on VPN app industry patterns + EasyTier CLI capabilities)
+
+---
 
 ## Feature Landscape
 
 ### Table Stakes (Users Expect These)
 
-Performance features users assume exist. Missing these = app feels broken or amateur.
+Features users assume exist in any network management app. Missing these = app feels incomplete.
 
-| Feature | Why Expected | Complexity | Notes |
-|---------|--------------|------------|-------|
-| Main thread responsiveness | Mac users expect UI never freezes; spinning beach ball = broken | MEDIUM | `@MainActor`, async/await, background queues for I/O |
-| Launch time < 1s | Instant launch is macOS norm; delay suggests poor quality | MEDIUM | Defer non-critical work, lazy initialization |
-| Memory stability | Apps should run indefinitely without memory growth | MEDIUM | Proper subscription cleanup, bounded buffers, weak references |
-| Smooth animations | 60fps scroll/transitions; jank = poor polish | LOW | Avoid main thread blocking during animations |
-| Proper loading states | Every action needs immediate visual acknowledgment | LOW | Progress indicators, disabled states during operations |
-| Error feedback | Operations fail gracefully with user-friendly messages | LOW | Alerts, toasts, inline error messages |
-| Clean shutdown | No orphan processes, proper resource cleanup | MEDIUM | Process termination, timer invalidation, subscription disposal |
+| Feature | Why Expected | Complexity | Dependencies |
+|---------|--------------|------------|--------------|
+| Config import/export | Share configs between machines, backup | MEDIUM | Existing ConfigManager, file I/O |
+| Auto-connect on startup | Convenience for always-on VPN | LOW | Login item registration, config persistence |
+| Connection status feedback | User knows network state | LOW | Already exists in v1.0 |
 
 ### Differentiators (Competitive Advantage)
 
-Performance features that distinguish excellent macOS apps from adequate ones.
+Features that distinguish excellent network apps from adequate ones.
 
-| Feature | Value Proposition | Complexity | Notes |
-|---------|-------------------|------------|-------|
-| Speculative prefetching | Anticipate user actions, pre-load data for instant response | HIGH | Pre-connect networks, cache peer info |
-| Incremental UI updates | Large data changes without full view rebuilds | MEDIUM | `Identifiable` conformance, diffable data sources |
-| Background task coalescing | Batch periodic work to minimize CPU wakeups | MEDIUM | Timer consolidation, debouncing |
-| Memory pressure handling | Respond to system memory warnings, purge caches | MEDIUM | `NSCache`, `autoreleasepool`, cache eviction policies |
-| Lazy view loading | Only build views when displayed | LOW | `LazyVStack`, conditional view creation |
-| Optimistic UI updates | Show expected result immediately, reconcile on completion | HIGH | Connect appears instant, revert if fails |
-| Smooth state transitions | Animated state changes, no jarring jumps | MEDIUM | `withAnimation`, transition modifiers |
-| Energy efficiency | Minimal CPU/battery usage when idle | HIGH | Event-driven vs polling, efficient timers |
+| Feature | Value Proposition | Complexity | Dependencies |
+|---------|-------------------|------------|--------------|
+| Network stats visualization | Show latency/bandwidth/topology | HIGH | CLI parsing, periodic polling |
+| Quick-connect shortcuts | One-click connect from desktop | MEDIUM | App alias/CLI integration |
+| Advanced settings | Power user customization | MEDIUM | Extended config model |
+| Settings backup/restore | Full config portability | MEDIUM | Export/import all settings |
 
 ### Anti-Features (Commonly Requested, Often Problematic)
 
-Performance approaches that seem good but create problems.
-
 | Feature | Why Requested | Why Problematic | Alternative |
 |---------|---------------|-----------------|-------------|
-| Eager loading everywhere | "Everything should be instant" | High memory footprint, slow launch | Lazy loading + strategic prefetching |
-| Real-time updates on everything | "Always show latest data" | Excessive CPU/battery, unnecessary redraws | Polling intervals, on-demand refresh |
-| Large log buffers | "Never lose log history" | Memory grows unbounded | Bounded circular buffer + export to file |
-| Global singleton state | "Easy access from anywhere" | Hard to test, lifecycle issues | Dependency injection, scoped state |
-| Main thread assertions everywhere | "Be extra safe" | Noise hides real issues, performance cost | Strategic use at boundaries |
-| Premature optimization | "Make everything fast" | Complexity without proven benefit | Profile first, optimize bottlenecks |
+| Real-time bandwidth graph | "Show live speed" | High CPU, excessive UI updates | Periodic sampling (1-2s interval) |
+| Auto-connect all networks | "Always connected" | Resource contention, conflicts | Auto-connect last used only |
+| Cloud sync | "Access everywhere" | Privacy concerns, complexity | Local backup/restore sufficient |
+
+---
+
+## Feature Analysis
+
+### 1. Config Import/Export
+
+**Expected Behavior:**
+
+| Aspect | Behavior |
+|--------|----------|
+| Export format | JSON file (human-readable, easy to audit) |
+| Export contents | Network name, listen port, peers list, protocol options, advanced settings |
+| Credentials | Encrypted or omitted; user explicitly chooses |
+| Import behavior | Validate JSON schema, prompt for conflicts (rename vs replace) |
+| File extension | `.easytier.json` or `.json` |
+| Sharing | Email, AirDrop, iCloud, USB drive |
+
+**Industry Patterns:**
+
+- WireGuard: `wg-quick save` exports config, text-based
+- OpenVPN: `.ovpn` profile files (JSON-like structure)
+- Tunnelblick: Import via drag-drop of configuration files
+- iOS/macOS VPN: `.mobileconfig` for system-level VPN profiles
+
+**EasyTier Specific:**
+
+- EasyTier configs are already JSON in `~/Library/Application Support/EasytierGUI/`
+- Can export individual network configs or all at once
+- Should exclude runtime state (PID, connection status)
+
+**Complexity:** MEDIUM
+- File picker (NSOpenPanel/NSSavePanel)
+- JSON serialization/deserialization
+- Validation logic
+- Duplicate handling UI
+
+---
+
+### 2. Network Statistics
+
+**Expected Behavior:**
+
+| Metric | Source | Update Frequency |
+|--------|--------|------------------|
+| Peer list | `easytier-cli get-peers` | 3-5 seconds |
+| Connection status | Process state + peer count | Real-time |
+| Latency | Ping each peer via `easytier-cli` or raw ICMP | 5-10 seconds |
+| Bandwidth | Parse `easytier-cli get-statistics` (if available) | 2-5 seconds |
+| Uptime | Process start time | Static |
+
+**Visualization Options:**
+
+| View | Description |
+|------|-------------|
+| Peer table | List peers with latency, bytes sent/received |
+| Status indicator | Green/Yellow/Red based on peer count or latency |
+| Optional: Mini graph | Sparkline for bandwidth (last 60 seconds) |
+
+**EasyTier CLI Capabilities (to verify):**
+
+```
+easytier-cli get-peers        # List connected peers
+easytier-cli get-statistics   # Transfer stats (bandwidth)
+easytier-cli get-status       # Overall connection status
+```
+
+**If CLI doesn't provide stats:** Fall back to parsing process output or makingeducated guesses.
+
+**Complexity:** HIGH (requires CLI integration, periodic polling, UI updates)
+- Needs background timer for periodic updates
+- Must throttle UI updates to prevent excessive redraws
+- Latency measurement requires ICMP ping or CLI support
+
+---
+
+### 3. Advanced Settings
+
+**Expected Behavior:**
+
+| Category | Options |
+|----------|---------|
+| Protocol | UDP/TCP toggle, port number, encryption level |
+| Peer configuration | Allow/disallow specific peers, static peer list |
+| Debugging | Log level (verbose/debug/info/warn/error), log file path |
+| Network | MTU size, keepalive interval, reconnect behavior |
+| Performance | Concurrent connections, buffer sizes |
+
+**UI Implementation:**
+
+- Expandable/collapsible sections in Settings view
+- Some options hidden behind "Advanced" toggle
+- Tooltips explaining each option
+
+**EasyTier Core Options (to verify):**
+
+- `--protocol (udp|tcp)`
+- `--port <number>`
+- `--secret <hex>` (for encryption)
+- `--log-level (debug|info|warn|error)`
+- `--mtu <number>`
+- `--keepalive <seconds>`
+
+**Complexity:** MEDIUM
+- Extended config model with new fields
+- UI for each setting type (toggle, picker, text field)
+- Validation (port range, numeric constraints)
+
+---
+
+### 4. Auto-Connect on Startup
+
+**Expected Behavior:**
+
+| Aspect | Behavior |
+|--------|----------|
+| Enable/Disable | Toggle in Settings |
+| Selection | Remember last-used network config |
+| Timing | Connect after app launches and user logs in |
+| Privileges | Request authorization on first auto-connect |
+| Failure handling | Show notification if auto-connect fails |
+
+**Implementation Options:**
+
+| Approach | macOS Version | Complexity |
+|----------|---------------|------------|
+| SMAppService (Login Item) | 13+ | LOW |
+| LaunchAtLogin SwiftUI modifier | 13+ | LOW |
+| launchd plist in ~/Library/LaunchAgents | All | MEDIUM |
+
+**User Flow:**
+
+1. User enables "Auto-connect on startup" in Settings
+2. App registers as login item via SMAppService
+3. On next login, app launches (hidden or visible)
+4. App reads "last used config" from UserDefaults
+5. Automatically initiates connection
+
+**Complexity:** LOW-MEDIUM
+- UserDefaults for persisting preference
+- SMAppService API for login item registration
+- Auto-connect logic on app launch
+
+---
+
+### 5. Quick-Connect Shortcuts
+
+**Expected Behavior:**
+
+| Aspect | Behavior |
+|--------|----------|
+| Desktop shortcut | Click to launch app and connect to specific config |
+| Menu bar | Right-click menu with list of saved configs |
+| Keyboard shortcut | Optional global hotkey (requires Accessibility permission) |
+| Script export | Generate shell script for CLI usage |
+
+**Implementation:**
+
+| Method | Pros | Cons |
+|--------|------|------|
+| App Alias/Alias | Native macOS, easy to create | Limited customization |
+| Shell script | Lightweight, fast | Requires terminal for output |
+| Menu bar quick menu | Always accessible | Requires app running |
+
+**macOS "Desktop Shortcut" Reality:**
+
+- macOS doesn't have Windows-style desktop shortcuts
+- Best approach: Create app alias in ~/.Desktop or use menu bar
+- Alternative: Generate a small shell script that calls `easytier-gui --connect <config-id>`
+
+**Complexity:** MEDIUM
+- App alias creation (NSAlias)
+- Menu bar quick-connect menu
+- Command-line interface for background connect
+
+---
+
+### 6. Settings Backup/Restore
+
+**Expected Behavior:**
+
+| Aspect | Behavior |
+|--------|----------|
+| Backup contents | All network configs + app preferences |
+| Backup format | Single JSON file (or zip for multiple files) |
+| Backup location | User-selected (NSSavePanel) |
+| Restore behavior | Import all configs, prompt for conflicts |
+| Selective restore | Option to restore only specific configs |
+
+**Backup File Structure:**
+
+```json
+{
+  "version": "1.1",
+  "timestamp": "2026-04-24T10:00:00Z",
+  "configs": [
+    {
+      "id": "uuid",
+      "name": "Home Network",
+      "port": 51820,
+      "peers": [...],
+      "settings": {...}
+    }
+  ],
+  "preferences": {
+    "autoConnect": true,
+    "lastConfigId": "uuid",
+    "checkUpdates": true
+  }
+}
+```
+
+**Complexity:** MEDIUM
+- Combine all configs into single export
+- JSON serialization with proper encoding
+- Import validation and conflict resolution UI
+
+---
 
 ## Feature Dependencies
 
 ```
-Main Thread Responsiveness
-    └──requires──> Async/Await or GCD Background Queues
-                       └──requires──> Thread-safe state access
+Config Import/Export
+    └──requires──> JSON serialization (Codable)
+    └──requires──> File picker (NSOpenPanel/NSSavePanel)
+    └──requires──> Config validation logic
 
-Memory Stability
-    └──requires──> Subscription Cleanup (AnyCancellable)
-    └──requires──> Bounded Data Structures
-    └──requires──> Weak References in Closures
+Network Stats
+    └──requires──> easytier-cli integration
+    └──requires──> Periodic polling (Timer)
+    └──requires──> Throttled UI updates
 
-Incremental UI Updates
-    └──requires──> Identifiable Models
-    └──requires──> Equatable for diffing
+Advanced Settings
+    └──requires──> Extended EasyTierConfig model
+    └──requires──> Settings UI components
+    └──requires──> Validation logic
 
-Background Task Coalescing
-    └──enhances──> Energy Efficiency
-    └──enhances──> Main Thread Responsiveness
+Auto-Connect
+    └──requires──> UserDefaults persistence
+    └──requires──> SMAppService (login item)
+    └──requires──> Launch logic modification
 
-Optimistic UI Updates
-    └──requires──> Error Handling with Rollback
-    └──conflicts──> Simple synchronous operations (over-engineering)
+Quick-Connect Shortcuts
+    └──requires──> Menu bar quick menu
+    └──requires──> Optional: CLI argument parsing
+    └──requires──> Optional: App alias creation
 
-Speculative Prefetching
-    └──enhances──> Launch Time
-    └──conflicts──> Memory Efficiency (trade-off)
+Backup/Restore
+    └──requires──> Config import/export (reuses)
+    └──requires──> Preferences serialization
+    └──requires──> Conflict resolution UI
 ```
 
-### Dependency Notes
-
-- **Main Thread Responsiveness requires Async/Await:** Blocking I/O must move off main thread; Swift concurrency or GCD provides mechanism
-- **Memory Stability requires Subscription Cleanup:** Combine subscriptions hold references; improper cleanup = leaks
-- **Incremental UI Updates requires Identifiable:** SwiftUI needs stable IDs to diff and update individual rows vs rebuilding entire lists
-- **Background Task Coalescing enhances Energy Efficiency:** Fewer CPU wakeups = less battery drain
-- **Optimistic UI Updates conflicts with Simple synchronous operations:** For trivial operations, optimistic update adds complexity without benefit
-- **Speculative Prefetching conflicts with Memory Efficiency:** Pre-loading trades memory for speed; must balance
+---
 
 ## MVP Definition
 
-### Launch With (v1)
+### Launch With (v1.1)
 
-Minimum viable performance — what's needed for acceptable user experience.
+Minimum viable feature set for acceptable user experience.
 
-- [x] Main thread never blocks — All I/O, process spawning, network calls on background queues
-- [x] Bounded log buffer — Circular buffer with max entries (already: `maxLogEntries = 100`)
-- [x] Loading states on all actions — Button disabled + spinner during connect/disconnect
-- [x] Proper error messages — User-friendly text, not technical stack traces
-- [x] Subscription cleanup — `AnyCancellable` stored in set, cleared on deinit
-- [x] Timer invalidation — Peer polling timers properly stopped when network disconnects
+- [ ] **FEAT-01**: Config export to JSON file
+- [ ] **FEAT-01**: Config import from JSON file with validation
+- [ ] **FEAT-04**: Auto-connect toggle in Settings
+- [ ] **FEAT-04**: Auto-connect last used network on launch
+- [ ] **FEAT-06**: Settings backup to JSON file
+- [ ] **FEAT-06**: Settings restore from JSON file
 
-### Add After Validation (v1.x)
+### Add After Validation (v1.1.x)
 
-Performance improvements to add once core stability is verified.
+Features to add once core functionality is verified.
 
-- [ ] Startup optimization — Defer non-critical initialization, measure launch time
-- [ ] Debounced config saves — Already partially implemented, ensure consistent
-- [ ] Animation polish — Smooth transitions for state changes
-- [ ] Memory warning handling — Respond to `applicationDidReceiveMemoryWarning`
+- [ ] **FEAT-02**: Peer list with latency display
+- [ ] **FEAT-02**: Connection status with peer count
+- [ ] **FEAT-03**: Advanced settings UI (protocol, logging)
+- [ ] **FEAT-05**: Menu bar quick-connect menu
 
 ### Future Consideration (v2+)
 
-Advanced optimizations after product-market fit.
+Advanced features after product-market fit.
 
-- [ ] Speculative network pre-connection — Predict likely config, pre-validate
-- [ ] Background refresh coalescing — Single timer for all periodic tasks
-- [ ] Lazy peer list loading — Only fetch peers when PeersView visible
-- [ ] Energy profiling — Instruments measurement, minimize idle CPU
+- [ ] Bandwidth visualization (sparkline graph)
+- [ ] Network topology visualization
+- [ ] Desktop aliases for quick connect
+- [ ] Global keyboard shortcuts
+
+---
 
 ## Feature Prioritization Matrix
 
 | Feature | User Value | Implementation Cost | Priority |
 |---------|------------|---------------------|----------|
-| Main thread responsiveness | HIGH | MEDIUM | P1 |
-| Loading states | HIGH | LOW | P1 |
-| Error feedback | HIGH | LOW | P1 |
-| Memory stability | HIGH | MEDIUM | P1 |
-| Clean shutdown | MEDIUM | MEDIUM | P1 |
-| Launch time optimization | MEDIUM | MEDIUM | P2 |
-| Animation polish | MEDIUM | LOW | P2 |
-| Background task coalescing | MEDIUM | MEDIUM | P2 |
-| Memory warning handling | LOW | MEDIUM | P2 |
-| Speculative prefetching | LOW | HIGH | P3 |
-| Energy profiling | LOW | HIGH | P3 |
+| Config import/export | HIGH | MEDIUM | P1 |
+| Auto-connect on startup | HIGH | LOW | P1 |
+| Settings backup/restore | HIGH | MEDIUM | P1 |
+| Network stats (peers) | MEDIUM | MEDIUM | P2 |
+| Advanced settings | MEDIUM | MEDIUM | P2 |
+| Quick-connect menu | MEDIUM | MEDIUM | P2 |
+| Bandwidth visualization | LOW | HIGH | P3 |
+| Desktop shortcuts | LOW | MEDIUM | P3 |
 
-**Priority key:**
-- P1: Must have for acceptable performance (table stakes)
-- P2: Should have, improves perceived quality
-- P3: Nice to have, advanced optimization
+**Priority Key:**
+- P1: Must have for v1.1 release
+- P2: Should have, improves user experience
+- P3: Nice to have, can defer to future
 
-## Swift/SwiftUI-Specific Techniques
+---
 
-### Concurrency Patterns
+## Technical Implementation Notes
 
-| Technique | Use Case | Example |
-|-----------|----------|---------|
-| `@MainActor` | ViewModels, UI updates | `@MainActor class ProcessViewModel` |
-| `Task { await ... }` | Async operations from sync context | Button action triggers async work |
-| `Task.detached { }` | True background work | File I/O, network calls |
-| `await MainActor.run { }` | Return to main thread | Update UI after background work |
+### EasyTier CLI Integration
 
-### Memory Patterns
+Based on EasyTier project structure, expected CLI commands:
 
-| Technique | Use Case | Example |
-|-----------|----------|---------|
-| `[weak self]` in closures | Break retain cycles | Timer callbacks, Combine sinks |
-| `AnyCancellable` storage | Track subscriptions | `var cancellables = Set<AnyCancellable>()` |
-| `NSCache` | System-aware caching | Cached images, downloaded binaries |
-| Circular buffer | Bounded growth | Log entries with fixed max count |
-| `autoreleasepool` | Batch allocations | Loop processing many objects |
+```bash
+# Get connected peers
+easytier-cli get-peers
 
-### SwiftUI Rendering
+# Get network status
+easytier-cli get-status
 
-| Technique | Use Case | Example |
-|-----------|----------|---------|
-| `Identifiable` | Stable row identity | `PeerInfo: Identifiable` |
-| `Equatable` | Prevent unnecessary rebuilds | Custom `==` for complex models |
-| `@StateObject` vs `@ObservedObject` | View-owned vs external state | ViewModel lifecycle |
-| `LazyVStack` | Large lists | Only render visible rows |
-| `task {}` modifier | View lifecycle async work | Load data when view appears |
+# Get statistics (if available)
+easytier-cli get-statistics
 
-### Process/Timer Management
+# Connect with specific config
+easytier-core --config <path>
+```
 
-| Technique | Use Case | Example |
-|-----------|----------|---------|
-| Process termination handling | Clean subprocess exit | `process.terminationHandler` |
-| Timer with RunLoop | Periodic polling | Peer info fetching |
-| `Timer.scheduledTimer(withTimeInterval:)` | Modern timer API | Avoid `Timer(timeInterval:)` |
-| Debouncing | Batch rapid changes | Config saves, search input |
+### macOS Login Item API
 
-## Current Codebase Assessment
+```swift
+import ServiceManagement
 
-### Already Implemented
+// Register as login item (macOS 13+)
+SMAppService.mainApp.register()
 
-- ✓ `@MainActor` on ProcessViewModel
-- ✓ Circular buffer for logs (`maxLogEntries = 100`)
-- ✓ ConfigManager debounced saves
-- ✓ `AnyCancellable` sets in ViewModels
-- ✓ `Identifiable` on PeerInfo
+// Unregister
+SMAppService.mainApp.unregister()
 
-### Needs Verification
+// Check status
+SMAppService.mainApp.status
+```
 
-- ? Timer invalidation in NetworkRuntime
-- ? Process cleanup on app termination
-- ? Weak self in all closures
-- ? Background queue for file I/O
-- ? Main thread safety for all `@Published` updates
+### File Picker Usage
 
-### Likely Missing
+```swift
+// Export
+let savePanel = NSSavePanel()
+savePanel.allowedContentTypes = [.json]
+savePanel.nameFieldStringValue = "easytier-config.json"
 
-- ✗ Loading states on button actions
-- ✗ Optimistic UI updates
-- ✗ Memory warning response
-- ✗ Startup time measurement
-- ✗ Energy profiling
+// Import
+let openPanel = NSOpenPanel()
+openPanel.allowedContentTypes = [.json]
+openPanel.allowsMultipleSelection = false
+```
+
+---
 
 ## Sources
 
-- Apple SwiftUI Performance documentation
-- WWDC sessions on Swift Concurrency
-- Instruments profiling best practices
-- Current codebase architecture analysis (ARCHITECTURE.md)
-- Project requirements (PROJECT.md)
+- WireGuard documentation: `wg show` CLI interface
+- OpenVPN configuration profile format
+- Apple Login Item API (SMAppService)
+- EasyTier CLI interface (project source analysis)
+- macOS Human Interface Guidelines
+- Current codebase: ConfigManager, ProcessViewModel, EasyTierService
 
 ---
-*Feature research for: Swift/SwiftUI macOS Performance Optimization*
-*Researched: 2025-04-24*
+
+*Feature research for: EasyTier GUI v1.1 Enhancement Features*
+*Researched: 2026-04-24*

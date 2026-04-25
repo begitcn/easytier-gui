@@ -8,6 +8,19 @@
 import Foundation
 import Combine
 
+// MARK: - Config Error
+
+enum ConfigError: LocalizedError {
+    case invalidFormat
+
+    var errorDescription: String? {
+        switch self {
+        case .invalidFormat:
+            return "配置文件格式无效"
+        }
+    }
+}
+
 // MARK: - Config Manager
 
 /// 配置管理器 - 管理网络配置的增删改查和持久化
@@ -173,6 +186,24 @@ class ConfigManager: ObservableObject {
     func importConfigs(from url: URL) throws -> [EasyTierConfig] {
         let data = try Data(contentsOf: url)
         return try decoder.decode([EasyTierConfig].self, from: data)
+    }
+
+    /// 导入配置（自动检测单个或多个格式）
+    func importConfigsFromAnyFormat(from url: URL) throws -> [EasyTierConfig] {
+        let data = try Data(contentsOf: url)
+
+        // 先尝试解析为数组格式（导出全部）
+        if let configs = try? decoder.decode([EasyTierConfig].self, from: data) {
+            return configs
+        }
+
+        // 再尝试解析为单个配置格式
+        if let config = try? decoder.decode(EasyTierConfig.self, from: data) {
+            return [config]
+        }
+
+        // 都失败了，抛出错误
+        throw ConfigError.invalidFormat
     }
 
     // MARK: - Port Normalization

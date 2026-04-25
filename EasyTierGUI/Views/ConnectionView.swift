@@ -23,6 +23,11 @@ struct HoverEffectModifier: ViewModifier {
             .animation(.quick, value: isHovered)
             .onHover { hovering in
                 isHovered = hovering
+                if hovering {
+                    NSCursor.pointingHand.push()
+                } else {
+                    NSCursor.pop()
+                }
             }
     }
 }
@@ -235,6 +240,8 @@ struct ConfigListSection: View {
     @State private var showImportError = false
     @State private var importErrorMessage = ""
     @State private var showExportAllSuccess = false
+    @State private var showImportSkipped = false
+    @State private var skippedConfigNames: [String] = []
     @State private var isConnectingAll = false
     @State private var isDisconnectingAll = false
     @State private var isAnimating = false
@@ -261,18 +268,20 @@ struct ConfigListSection: View {
                             if isConnectingAll {
                                 ProgressView()
                                     .controlSize(.small)
+                            } else {
+                                Image(systemName: "link")
                             }
-                            Image(systemName: isConnectingAll ? "" : "link")
                             Text(isConnectingAll ? "连接中..." : "全部连接")
                         }
                         .font(.system(size: 11, weight: .medium))
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(Color.green.opacity(0.1))
+                        .foregroundColor(.green)
+                        .cornerRadius(6)
                     }
+                    .buttonStyle(.plain)
                     .hoverEffect(normal: 1.0, hover: 0.85)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
-                    .background(Color.green.opacity(0.1))
-                    .foregroundColor(.green)
-                    .cornerRadius(6)
                     .disabled(vm.configManager.configs.isEmpty || vm.isAnyNetworkRunning || isConnectingAll)
                     .opacity((vm.configManager.configs.isEmpty || vm.isAnyNetworkRunning || isConnectingAll) ? 0.5 : 1)
 
@@ -287,18 +296,20 @@ struct ConfigListSection: View {
                             if isDisconnectingAll {
                                 ProgressView()
                                     .controlSize(.small)
+                            } else {
+                                Image(systemName: "link.circle")
                             }
-                            Image(systemName: isDisconnectingAll ? "" : "link.circle")
                             Text(isDisconnectingAll ? "断开中..." : "全部断开")
                         }
                         .font(.system(size: 11, weight: .medium))
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(Color.red.opacity(0.1))
+                        .foregroundColor(.red)
+                        .cornerRadius(6)
                     }
+                    .buttonStyle(.plain)
                     .hoverEffect(normal: 1.0, hover: 0.85)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
-                    .background(Color.red.opacity(0.1))
-                    .foregroundColor(.red)
-                    .cornerRadius(6)
                     .disabled(!vm.isAnyNetworkRunning || isDisconnectingAll)
                     .opacity((!vm.isAnyNetworkRunning || isDisconnectingAll) ? 0.5 : 1)
                 }
@@ -311,13 +322,14 @@ struct ConfigListSection: View {
                             Text("导入")
                         }
                         .font(.system(size: 11, weight: .medium))
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(Color.accentColor.opacity(0.1))
+                        .foregroundColor(.accentColor)
+                        .cornerRadius(6)
                     }
+                    .buttonStyle(.plain)
                     .hoverEffect(normal: 1.0, hover: 0.85)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
-                    .background(Color.accentColor.opacity(0.1))
-                    .foregroundColor(.accentColor)
-                    .cornerRadius(6)
 
                     Button(action: { exportAllConfigs() }) {
                         HStack(spacing: 4) {
@@ -325,13 +337,14 @@ struct ConfigListSection: View {
                             Text("导出全部")
                         }
                         .font(.system(size: 11, weight: .medium))
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(Color.orange.opacity(0.1))
+                        .foregroundColor(.orange)
+                        .cornerRadius(6)
                     }
+                    .buttonStyle(.plain)
                     .hoverEffect(normal: 1.0, hover: 0.85)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
-                    .background(Color.orange.opacity(0.1))
-                    .foregroundColor(.orange)
-                    .cornerRadius(6)
                     .disabled(vm.configManager.configs.isEmpty)
                     .opacity(vm.configManager.configs.isEmpty ? 0.5 : 1)
                 }
@@ -389,6 +402,7 @@ struct ConfigListSection: View {
                                     .background(Color.secondary.opacity(0.08))
                                     .cornerRadius(6)
                             }
+                            .buttonStyle(.plain)
                             .hoverEffect(scale: true)
                             .help("导出此配置")
 
@@ -414,14 +428,14 @@ struct ConfigListSection: View {
                                     Text(isConnectingNow ? "连接中..." : (isDisconnectingNow ? "断开中..." : (isRunning ? "断开" : "连接")))
                                 }
                                 .font(.system(size: 12, weight: .medium))
-                                .frame(minWidth: 60)
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 6)
+                                .background(isRunning ? Color.red.opacity(0.12) : Color.accentColor.opacity(0.12))
+                                .foregroundColor(isRunning ? .red : .accentColor)
+                                .cornerRadius(6)
                             }
+                            .buttonStyle(.plain)
                             .hoverEffect(normal: 1.0, hover: 0.85)
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 6)
-                            .background(isRunning ? Color.red.opacity(0.12) : Color.accentColor.opacity(0.12))
-                            .foregroundColor(isRunning ? .red : .accentColor)
-                            .cornerRadius(6)
                             .disabled(isOperating)
                             .opacity(isOperating ? 0.6 : 1)
 
@@ -438,6 +452,7 @@ struct ConfigListSection: View {
                                     .background(Color.red.opacity(0.08))
                                     .cornerRadius(6)
                             }
+                            .buttonStyle(.plain)
                             .hoverEffect(scale: true)
                             .disabled(isRunning || isOperating || vm.configManager.configs.count <= 1)
                             .opacity((isRunning || isOperating || vm.configManager.configs.count <= 1) ? 0.3 : 1)
@@ -480,6 +495,7 @@ struct ConfigListSection: View {
                     RoundedRectangle(cornerRadius: 10).stroke(Color.white.opacity(0.08), style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
                 )
             }
+            .buttonStyle(.plain)
             .hoverEffect(normal: 1.0, hover: 0.85)
             .foregroundColor(.secondary)
         }
@@ -511,33 +527,69 @@ struct ConfigListSection: View {
         } message: {
             Text("所有配置已成功导出")
         }
+        .alert("导入完成", isPresented: $showImportSkipped) {
+            Button("好的", role: .cancel) {
+                skippedConfigNames.removeAll()
+            }
+        } message: {
+            Text("部分配置已导入。\n以下重复配置已跳过：\n" + skippedConfigNames.map { "• \($0)" }.joined(separator: "\n"))
+        }
     }
 
     // MARK: - Import/Export Methods
 
     private func importConfig() {
         let panel = NSOpenPanel()
-        panel.allowsMultipleSelection = false
+        panel.allowsMultipleSelection = true  // 允许多选
         panel.canChooseDirectories = false
         panel.canCreateDirectories = false
         panel.allowedContentTypes = [.json]
         panel.title = "选择配置文件"
         panel.message = "选择要导入的 EasyTier 配置文件"
 
-        if panel.runModal() == .OK, let url = panel.url {
-            do {
-                let config = try vm.configManager.importConfig(from: url)
-                // 检查是否已存在相同 ID 的配置
-                if vm.configManager.configs.contains(where: { $0.id == config.id }) {
-                    // 生成新的 ID 避免冲突
-                    var newConfig = config
-                    newConfig.id = UUID()
-                    vm.configManager.addConfig(newConfig)
-                } else {
-                    vm.configManager.addConfig(config)
+        if panel.runModal() == .OK, !panel.urls.isEmpty {
+            var importedCount = 0
+            var skippedNames: [String] = []
+
+            for url in panel.urls {
+                do {
+                    // 尝试导入配置（可能是单个或多个）
+                    let configs = try vm.configManager.importConfigsFromAnyFormat(from: url)
+
+                    for config in configs {
+                        // 检查是否与现有配置重复（networkName + networkPassword + serverURI 都相同）
+                        let isDuplicate = vm.configManager.configs.contains { existing in
+                            existing.networkName == config.networkName &&
+                            existing.networkPassword == config.networkPassword &&
+                            existing.serverURI == config.serverURI
+                        }
+
+                        if isDuplicate {
+                            skippedNames.append(config.name)
+                        } else {
+                            // 如果 ID 冲突，生成新 ID
+                            var newConfig = config
+                            if vm.configManager.configs.contains(where: { $0.id == config.id }) {
+                                newConfig.id = UUID()
+                            }
+                            vm.configManager.addConfig(newConfig)
+                            importedCount += 1
+                        }
+                    }
+                } catch {
+                    importErrorMessage = "无法读取配置文件「\(url.lastPathComponent)」：\(error.localizedDescription)"
+                    showImportError = true
                 }
-            } catch {
-                importErrorMessage = "无法读取配置文件：\(error.localizedDescription)"
+            }
+
+            // 显示导入结果
+            if importedCount > 0 && skippedNames.isEmpty {
+                showExportSuccess = true
+            } else if importedCount > 0 && !skippedNames.isEmpty {
+                skippedConfigNames = skippedNames
+                showImportSkipped = true
+            } else if importedCount == 0 && !skippedNames.isEmpty {
+                importErrorMessage = "所有 \(skippedNames.count) 个配置都已存在，已跳过导入。"
                 showImportError = true
             }
         }

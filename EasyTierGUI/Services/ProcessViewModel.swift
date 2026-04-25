@@ -69,6 +69,29 @@ final class NetworkRuntime: ObservableObject, Identifiable {
     // MARK: - Connection Control
 
     func connect(config: EasyTierConfig) async {
+        // 如果正在断开中，等待断开完成
+        if isDisconnecting {
+            // 等待最多 5 秒让断开操作完成
+            var waited = 0
+            while isDisconnecting && waited < 50 {
+                try? await Task.sleep(nanoseconds: 100_000_000) // 100ms
+                waited += 1
+            }
+            // 如果还在断开，直接返回
+            if isDisconnecting {
+                return
+            }
+        }
+
+        // 如果已经连接，先断开
+        if service.isRunning {
+            isDisconnecting = true
+            try? await service.stop()
+            isDisconnecting = false
+            // 等待一小段时间确保进程完全停止
+            try? await Task.sleep(nanoseconds: 300_000_000) // 300ms
+        }
+
         isConnecting = true
         defer { isConnecting = false }
 
@@ -86,6 +109,15 @@ final class NetworkRuntime: ObservableObject, Identifiable {
     }
 
     func disconnect() async {
+        // 如果正在连接中，等待连接完成或超时
+        if isConnecting {
+            var waited = 0
+            while isConnecting && waited < 30 { // 最多等待 3 秒
+                try? await Task.sleep(nanoseconds: 100_000_000) // 100ms
+                waited += 1
+            }
+        }
+
         isDisconnecting = true
         defer { isDisconnecting = false }
 
@@ -371,6 +403,11 @@ class ProcessViewModel: ObservableObject {
         guard let config = configManager.configs.first(where: { $0.id == configID }) else { return }
         let runtime = ensureRuntime(for: configID)
 
+        // 如果该配置正在操作中，直接返回
+        if runtime.isConnecting || runtime.isDisconnecting {
+            return
+        }
+
         // 检查内核是否存在
         guard easytierCoreExists else {
             runtime.errorMessage = "未找到 easytier-core，请在设置中配置正确的 EasyTier 目录。"
@@ -416,6 +453,10 @@ class ProcessViewModel: ObservableObject {
 
     func disconnect(configID: UUID) async {
         guard let runtime = runtimes[configID] else { return }
+        // 如果该配置正在操作中，直接返回
+        if runtime.isConnecting || runtime.isDisconnecting {
+            return
+        }
         await runtime.disconnect()
         refreshOverallStatus()
     }

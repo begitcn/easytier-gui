@@ -117,6 +117,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationWillTerminate(_ notification: Notification) {
         // Stop processes on exit without triggering a new password prompt.
         processVM?.forceStopAllSync(allowPrivilegePrompt: false)
+
+        // 兜底清理：确保所有 easytier-core/easytier-cli 进程都被终止
+        // 这处理了 PID 记录丢失但进程仍在运行的情况
+        Task {
+            await EasyTierService.cleanupOrphanedProcesses()
+        }
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {

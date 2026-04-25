@@ -1,208 +1,284 @@
 # Pitfalls Research
 
-**Domain:** Swift/SwiftUI macOS Desktop Application Performance Optimization
-**Researched:** 2025-04-24
+**Domain:** VPN/Network Management macOS Application Feature Enhancement
+**Researched:** 2026-04-24
 **Confidence:** HIGH
 
 ## Critical Pitfalls
 
-### Pitfall 1: Main Thread Blocking During Process Spawn
+### Pitfall 1: Config Import Without Schema Validation
 
 **What goes wrong:**
-Spawning a `Process` or calling `PrivilegedExecutor.runCommand()` directly on the main thread blocks the UI, causing the spinning beach ball. The Authorization Services dialog itself can block while waiting for user input.
+Importing a configuration file without validating the schema allows invalid or malicious configs to crash the app or cause undefined behavior. The app may fail silently or throw cryptic errors when loading malformed JSON.
 
 **Why it happens:**
-Developers often call process management methods synchronously from UI event handlers. Even with `@MainActor`, synchronous operations will block. Authorization prompts are inherently blocking operations.
+Developers assume imported configs follow the same format as exported configs. They skip validation because "we control the export format". However, users may hand-edit configs, use configs from different app versions, or import configs from other sources.
 
 **How to avoid:**
-- Wrap privileged execution in `withCheckedThrowingContinuation` and dispatch to a background queue
-- Use `Task { }` with proper actor isolation for async process operations
-- Never call `Process.run()` or `PrivilegedExecutor.runCommand()` directly from UI code
+- Implement explicit schema validation on import using a schema version field
+- Validate all required fields exist and are of correct type before processing
+- Provide clear error messages indicating which field is invalid
+- Add a "dry run" mode that validates without applying
 
 **Warning signs:**
-- Beach ball appears when clicking "Connect" button
-- `Process.run()` called from a `@MainActor` context without async indirection
-- `DispatchQueue.main.async` used but the blocking operation is still on main queue
+- App crashes when importing user-edited config file
+- Config loads but network fails with unrelated error messages
+- Different behavior between imported and manually-created configs
 
-**Phase to address:** Phase 1 (Startup & Responsiveness)
-
-**Evidence in codebase:**
-`EasyTierService.swift:115-125` already implements this correctly with `withCheckedThrowingContinuation` and `DispatchQueue.global(qos: .userInitiated).async`.
+**Phase to address:** Phase 1 (Config Import/Export Foundation)
 
 ---
 
-### Pitfall 2: Timer Retain Cycles and Leaked Timers
+### Pitfall 2: Config Export Includes Sensitive Data
 
 **What goes wrong:**
-`Timer.scheduledTimer` retains its target, creating retain cycles. If the timer isn't properly invalidated when the owning object is deallocated, it continues firing and calling methods on a partially deallocated object.
+Exporting configuration includes credentials, private keys, or tokens in plain text. Users share these files unknowingly, exposing sensitive network access credentials.
 
 **Why it happens:**
-Developers forget to invalidate timers in `deinit`, or the timer captures `self` strongly in its closure without using `[weak self]`.
+Developers store all config properties in a single model without marking sensitive fields. Export serialization includes everything by default.
 
 **How to avoid:**
-- Always invalidate timers in `deinit`
-- Always use `[weak self]` in timer closures
-- For `@MainActor` classes, remember `deinit` cannot be actor-isolated, so timer cleanup must be dispatched to main queue
+- Mark sensitive fields (passwords, tokens, keys) with a protocol or attribute
+- Implement `Codable` with `encode(to:)` that skips or redacts sensitive fields for export
+- Provide explicit UI toggle "Include credentials" defaulting to off
+- Warn users before exporting configs with sensitive data
 
 **Warning signs:**
-- Timer callback crashes with EXC_BAD_ACCESS
-- Memory not releasing after view disappears
-- Timer continuing to fire after network disconnect
+- Export file contains plaintext passwords or tokens
+- Users share exported configs and later experience unauthorized access
+- No warning dialog when exporting config with secrets
 
-**Phase to address:** Phase 2 (Memory Stability)
-
-**Evidence in codebase:**
-`NetworkRuntime.swift:52-56` - `deinit` invalidates timer correctly, but the timer closure at line 93 uses `[weak self]` which is correct. However, `stopPrivilegedLogPolling` dispatches to main queue for invalidation (line 577-580), which is necessary since the timer may have been scheduled on the main run loop.
+**Phase to address:** Phase 1 (Config Import/Export Foundation)
 
 ---
 
-### Pitfall 3: SwiftUI View Identity Causing Unnecessary Re-renders
+### Pitfall 3: Real-time Stats Polling Causes Performance Degradation
 
 **What goes wrong:**
-Using `.id()` modifier with unstable identifiers causes SwiftUI to destroy and recreate views unnecessarily. Using index-based `ForEach` without stable identifiers can cause state loss.
+Fetching peer statistics, latency, and bandwidth data too frequently (e.g., every 100ms) consumes CPU, causes UI stuttering, and may overwhelm the underlying easytier-cli process.
 
 **Why it happens:**
-Developers use array indices as identifiers in `ForEach`, or use UUID-based `.id()` modifiers that change on parent re-renders. SwiftUI sees a new identity and rebuilds the entire view subtree.
+Developers implement "real-time" as "poll as fast as possible" without considering the cost. The easytier-cli command itself is relatively expensive, and SwiftUI bindings amplify the problem.
 
 **How to avoid:**
-- Use `Identifiable` protocol with stable IDs for collection items
-- Avoid `.id()` modifiers that change frequently
-- Be careful with `onAppear` - it can fire multiple times during scroll or navigation
+- Use a polling interval of at least 1-2 seconds for stats updates
+- Batch all stat queries into a single CLI call rather than multiple calls
+- Use `Combine` throttling (`throttle(for:)`) to limit UI updates
+- Consider using event-driven updates if easytier-cli supports it
 
 **Warning signs:**
-- Form fields resetting unexpectedly
-- Scroll position jumping
-- UI flickering during state updates
+- CPU usage spikes when stats view is visible
+- App becomes sluggish with multiple network runtimes
+- Terminal shows rapid easytier-cli invocations
 
-**Phase to address:** Phase 1 (Startup & Responsiveness)
-
-**Evidence in codebase:**
-`ConnectionView.swift:25` uses `.id(config.id)` on ConfigFormView - this is correct since config.id is stable. `LogView.swift:38` uses `.id(runtime.id)` which is also stable.
+**Phase to address:** Phase 2 (Network Stats Implementation)
 
 ---
 
-### Pitfall 4: Combine Subscription Accumulation
+### Pitfall 4: Stats Display Shows Stale Data Without Indication
 
 **What goes wrong:**
-`AnyCancellable` stored in a `Set<AnyCancellable>` but subscriptions created in methods that get called multiple times accumulate without cleanup. Each call adds a new subscription.
+The stats UI shows latency/bandwidth numbers that are minutes old without any visual indication, leading users to believe they have current data when the network may be disconnected.
 
 **Why it happens:**
-Developers create subscriptions inside methods like `onAppear` or computed properties without checking if a subscription already exists. The cancellables set grows indefinitely.
+Polling stops or fails silently when the network disconnects, but the UI continues showing the last known values. There's no "last updated" timestamp or "disconnected" state visualization.
 
 **How to avoid:**
-- Create subscriptions once in `init()` when possible
-- Use `.prefix(1)` or `.removeDuplicates()` to limit subscription activity
-- Consider using `ObservableObject`'s built-in change tracking instead of manual Combine subscriptions
+- Display "last updated" timestamp for all stats
+- Show a clear disconnected/offline state with dimmed or grayed stats
+- Use visual indicators (color, icon) for stale data (e.g., yellow after 30s, red after 60s)
+- Implement a "refresh" button for manual update
 
 **Warning signs:**
-- Callback firing multiple times for a single event
-- Memory growing slowly over time
-- Subscription closures capturing stale state
+- Users report "stats show connected" when actually disconnected
+- No visual change when network state changes while stats view is open
+- Stats continue showing previous values after disconnect
 
-**Phase to address:** Phase 2 (Memory Stability)
-
-**Evidence in codebase:**
-`NetworkRuntime.swift:34-49` creates subscriptions in `init()` which is correct pattern. `ProcessViewModel.swift:153-170` also creates subscriptions in `init()`.
+**Phase to address:** Phase 2 (Network Stats Implementation)
 
 ---
 
-### Pitfall 5: DispatchQueue.main.async Overuse in @MainActor Context
+### Pitfall 5: Advanced Settings Expose Internal Debug Options
 
 **What goes wrong:**
-Using `DispatchQueue.main.async` inside `@MainActor` methods is redundant and can cause unexpected ordering issues. The code is already guaranteed to run on main thread.
+Advanced settings panel exposes internal debugging options (log levels, verbose output, test flags) that can confuse users, cause unintended behavior, or create support burden.
 
 **Why it happens:**
-Developers don't trust `@MainActor` or are migrating old code that used manual dispatch. They add extra dispatch calls "to be safe".
+Developers add debug controls "temporarily" during development and forget to remove them. Or they add all possible options without prioritizing user-facing ones.
 
 **How to avoid:**
-- Remove `DispatchQueue.main.async` calls from `@MainActor` methods
-- Trust the Swift concurrency system
-- Only use explicit dispatch when bridging from non-MainActor code
+- Separate "advanced" (power user) from "debug" (developer-only) settings
+- Use a build flag to completely disable debug options in release builds
+- Add a separate "Developer" section hidden by default behind a secret gesture or preference
+- Document which options are safe to change
 
 **Warning signs:**
-- `DispatchQueue.main.async` inside a method marked `@MainActor`
-- Nested `DispatchQueue.main.async` calls
-- State updates happening out of expected order
+- Settings include options like "Verbose logging", "Dump packet hex", "Test mode"
+- Users ask about settings they shouldn't touch
+- Settings contain values that crash the app when changed
 
-**Phase to address:** Phase 1 (Startup & Responsiveness)
-
-**Evidence in codebase:**
-`EasyTierService.swift:517-519` - `publishRunning` uses `DispatchQueue.main.async` which is appropriate since `EasyTierService` is NOT marked `@MainActor`. However, `ProcessViewModel` methods that call these from `@MainActor` context don't need additional dispatch.
+**Phase to address:** Phase 3 (Advanced Settings UI)
 
 ---
 
-### Pitfall 6: onAppear for Expensive Initialization
+### Pitfall 6: Auto-connect Runs Before Network is Ready
 
 **What goes wrong:**
-Putting expensive synchronous operations in `onAppear` blocks the view from appearing, or causes operations to run multiple times as views scroll in/out of visibility.
+Auto-connect on startup fails because the network stack isn't ready when the app attempts to connect. The app shows "auto-connecting" but fails, confusing users.
 
 **Why it happens:**
-`onAppear` feels like the right place for initialization, but SwiftUI calls it whenever the view enters the visible hierarchy, not just once. In scrollable views, this can happen frequently.
+The app launches at login and immediately tries to connect, but macOS may not have fully initialized the network interfaces. Race condition between app launch and network availability.
 
 **How to avoid:**
-- Use `.task` modifier for async work instead of `onAppear`
-- For one-time initialization, use `@StateObject` initialization or explicit state flags
-- Debounce or check if already initialized before re-running
+- Add a delay (3-5 seconds) before attempting auto-connect
+- Monitor network interface availability and only connect when at least one interface is up
+- Provide feedback: "Waiting for network..." rather than showing a failed attempt
+- Allow users to configure auto-connect delay
 
 **Warning signs:**
-- View appearing delayed or with blank state
-- Network requests firing multiple times
-- Console logs showing repeated initialization
+- Auto-connect always fails on first login attempt but works on retry
+- Console shows network errors immediately after app launch
+- Users disable auto-connect because it "never works"
 
-**Phase to address:** Phase 1 (Startup & Responsiveness)
-
-**Evidence in codebase:**
-`ConnectionView.swift:45-49` uses `onAppear` to set `editingConfig` - this is lightweight and acceptable. `EasyTierGUIApp.swift:69-71` uses `onAppear` to set `appDelegate.processVM` which is also acceptable.
+**Phase to address:** Phase 4 (Auto-connect Implementation)
 
 ---
 
-### Pitfall 7: Log/Array Unbounded Growth
+### Pitfall 7: Auto-connect Without User Consent After Update
 
 **What goes wrong:**
-`@Published` arrays that grow without bound cause memory growth and slower UI updates. SwiftUI must diff larger arrays on each change.
+After an app update, auto-connect settings are unexpectedly enabled or changed, causing the app to connect without the user's explicit intention.
 
 **Why it happens:**
-Developers append to arrays without implementing pruning logic. The circular buffer pattern is often forgotten.
+Code preserves the previous auto-connect preference during migration but doesn't consider that default should be off for new users, or there's a bug in preference migration logic.
 
 **How to avoid:**
-- Implement maximum size limits with removal of oldest entries
-- Use `removeFirst()` when over limit: `if array.count > max { array.removeFirst(array.count - max) }`
-- Consider lazy loading for large lists
+- Default auto-connect to OFF for new installations
+- During migration, explicitly prompt users about auto-connect preference rather than assuming
+- Log auto-connect state changes for debugging
+- Provide clear UI indication when auto-connect is active
 
 **Warning signs:**
-- Memory growing linearly over time
-- UI becoming sluggish after extended use
-- `@Published` array used for logs without size limit
+- Users report unexpected network connections after update
+- Auto-connect preference is unexpectedly true after fresh install
+- No indication in UI that auto-connect is enabled
 
-**Phase to address:** Phase 2 (Memory Stability)
-
-**Evidence in codebase:**
-`EasyTierService.swift:65-66` correctly defines `maxLogEntries = 100` and `maxLogMessageLength = 2000`. `EasyTierService.swift:388-390` correctly removes old entries when over limit.
+**Phase to address:** Phase 4 (Auto-connect Implementation)
 
 ---
 
-### Pitfall 8: NSAlert.runModal() Blocking Main Thread
+### Pitfall 8: Quick Connect URL Scheme Collision
 
 **What goes wrong:**
-Calling `NSAlert.runModal()` blocks the main thread and prevents the app from responding to other events. This can cause beach balls or prevent proper app termination.
+The custom URL scheme (e.g., `easytier://`) collides with another app or is too generic, causing conflicts. Or worse, a malicious app can register the same scheme and intercept connections.
 
 **Why it happens:**
-`runModal()` is the standard AppKit API, but it's a blocking call. For non-critical alerts, this can feel unresponsive.
+Developers pick a simple URL scheme without checking for conflicts, or use a scheme that's commonly used (e.g., `vpn://`, `connect://`).
 
 **How to avoid:**
-- For non-critical alerts, consider using SwiftUI native `.alert()` modifier
-- Use `beginSheetModal` for window-attached alerts instead of app-modal
-- Reserve `runModal()` for truly blocking situations like critical errors
+- Use a reverse-DNS style scheme: `com.easytier.gui.connect`
+- Register the scheme with a complex, app-specific path
+- Include a secret token in the URL to prevent brute-force attacks
+- Document the URL scheme and warn about security implications
 
 **Warning signs:**
-- App unresponsive while alert is shown
-- Menu bar items not updating during alert
-- Background timers not firing during alert
+- Other apps fail to register the same scheme
+- Security scanners flag the URL scheme as vulnerable
+- No validation of URL parameters before executing connect
 
-**Phase to address:** Phase 1 (Startup & Responsiveness)
+**Phase to address:** Phase 5 (Quick Connect Implementation)
 
-**Evidence in codebase:**
-`EasyTierGUIApp.swift:282-301` uses `alert.runModal()` for authorization error. This is acceptable for a critical error that blocks app usage, but could be improved with SwiftUI native alert.
+---
+
+### Pitfall 9: Quick Connect Executes Without Confirmation
+
+**What goes wrong:**
+A quick-connect URL opens the app and automatically connects to a network without user confirmation. This can be exploited by malicious websites or other apps to silently connect the VPN.
+
+**Why it happens:**
+Developer assumes URLs come from trusted sources (e.g., user-created shortcuts). However, any app or webpage can trigger the URL scheme.
+
+**How to avoid:**
+- Always show a confirmation dialog for URL-triggered connections
+- Display the network name and warn about network behavior
+- Require user interaction to confirm before connecting
+- Log all URL-based connection attempts for security audit
+
+**Warning signs:**
+- App connects immediately when receiving a URL without any UI
+- No confirmation dialog appears for quick-connect shortcuts
+- Security review flags "silent connect" vulnerability
+
+**Phase to address:** Phase 5 (Quick Connect Implementation)
+
+---
+
+### Pitfall 10: Backup Excludes Critical Application State
+
+**What goes wrong:**
+Backup/restore only includes user-created configs but misses app state like window positions, recent connections, auto-connect preferences, or core version settings.
+
+**Why it happens:**
+Developer only backs up the obvious "config" files in Application Support, ignoring other state files. Different versions may have different state file locations.
+
+**How to address:**
+- Audit all files in Application Support and Library that contain user preferences
+- Include version information in the backup to enable migration
+- Test restore on a clean installation to verify completeness
+- Provide a checklist of what's included in the backup
+
+**Warning signs:**
+- After restore, window position resets to default
+- Auto-connect preference is lost after restore
+- Recent networks list is empty after restore
+
+**Phase to address:** Phase 6 (Backup/Restore Implementation)
+
+---
+
+### Pitfall 11: Backup File Format Not Versioned
+
+**What goes wrong:**
+Backup files created by different app versions are incompatible. Restoring an old backup on a new app version (or vice versa) fails or corrupts data.
+
+**Why it happens:**
+Developer assumes backup format is static. Adding new settings or changing data structures breaks backward/forward compatibility.
+
+**How to avoid:**
+- Include a version number in the backup file format
+- Implement version-aware migration logic that can upgrade/downgrade
+- Document the backup format and version history
+- Test migration paths between major versions
+
+**Warning signs:**
+- Users cannot restore backups from older app versions
+- Backup fails with "unsupported format version" error
+- Data loss occurs after restore (missing fields)
+
+**Phase to address:** Phase 6 (Backup/Restore Implementation)
+
+---
+
+### Pitfall 12: Restore Overwrites Current Configs Without Warning
+
+**What goes wrong:**
+Restoring a backup silently replaces all current configurations, causing data loss. Users lose their active networks without any confirmation.
+
+**Why it happens:**
+Developer implements restore as a simple "delete and replace" without checking if configs already exist or asking for user intent.
+
+**How to avoid:**
+- Always prompt: "Merge with existing" vs "Replace all"
+- Show a preview of what will change before applying
+- Create a backup of current state before restoring
+- Offer to restore to a different profile/location
+
+**Warning signs:**
+- Users lose all configs after restore without warning
+- No confirmation dialog appears during restore
+- Current networks disappear without any indication why
+
+**Phase to address:** Phase 6 (Backup/Restore Implementation)
 
 ---
 
@@ -210,92 +286,103 @@ Calling `NSAlert.runModal()` blocks the main thread and prevents the app from re
 
 | Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
 |----------|-------------------|----------------|-----------------|
-| `DispatchQueue.main.async` everywhere | "Safe" threading | Redundant dispatch, ordering issues | When bridging from non-MainActor code |
-| Index-based `ForEach` | Simpler code | State loss on reorder/delete | Never - use Identifiable |
-| `@Published` for all state | Automatic UI updates | Excessive re-renders | Only for state that actually affects UI |
-| Global singleton ViewModels | Easy access | Hard to test, hidden dependencies | Small apps only |
-| Skip `deinit` cleanup | Less code | Memory leaks, zombie timers | Never |
+| Skip schema validation for config import | Faster to ship | App crashes on invalid configs | Never |
+| Include credentials in config export | Simpler code | Security vulnerability | Never |
+| Poll stats as fast as possible | "Real-time" feel | CPU drain, UI stuttering | Never |
+| All settings visible by default | Simpler UI | User confusion, support burden | Never |
+| Auto-connect without delay | Faster connection | Unreliable on slow networks | Never |
+| Simple URL scheme | Easy to type | Conflicts, security issues | Never |
+| Backup only config JSON | Less code to write | Lost preferences, inconsistent state | Never |
 
 ## Integration Gotchas
 
 | Integration | Common Mistake | Correct Approach |
 |-------------|----------------|------------------|
-| Process spawning | Call `run()` on main thread | Use background queue with continuation |
-| Authorization Services | Assume success after one prompt | Check `isAuthorizedCached()` before privileged ops |
-| FileHandle readability | Forget to nil the handler | Set `readabilityHandler = nil` in cleanup |
-| NSStatusBar | Create multiple status items | Use singleton pattern with single item |
-| UserDefaults | Read on every view render | Use `@AppStorage` for cached access |
+| easytier-cli stats | Query separately for each metric | Batch all queries into single CLI call |
+| File import | Read entire file into memory | Stream large files, validate incrementally |
+| URL scheme handling | Parse URL without sanitization | Validate all URL parameters before use |
+| Keychain for credentials | Store with accessibility always | Use `kSecAttrAccessibleWhenUnlocked` |
+| Launch at login | Use deprecated `SMLoginItemSetEnabled` | Use `SMAppService.mainApp` (macOS 13+) |
 
 ## Performance Traps
 
 | Trap | Symptoms | Prevention | When It Breaks |
 |------|----------|------------|----------------|
-| Large `@Published` arrays | Slow UI, memory growth | Implement circular buffer | >100 items in logs |
-| Timer without weak self | Memory leak, crashes | Always use `[weak self]` | Any timer with closure |
-| `onChange` without debounce | Rapid state updates | Add debounce with Task.sleep | Typing in search fields |
-| LazyVStack in small lists | Overhead without benefit | Use VStack for small lists | <50 items |
-| Regex compilation in hot path | CPU spikes | Compile regex once as static | Called >10 times/second |
+| Stats polling every 100ms | High CPU, sluggish UI | Use 1-2s polling interval | Any network runtime |
+| Large config arrays | Slow export/import | Paginate or lazy-load | >50 network configs |
+| SwiftUI binding to CLI output | Rapid re-renders | Use `@State` with throttling | Any stats view |
+| Blocking file I/O on main thread | App freezes during backup | Use async file operations | Large backup files |
 
 ## Security Mistakes
 
 | Mistake | Risk | Prevention |
 |---------|------|------------|
-| Storing passwords in UserDefaults | Credential exposure | Use Keychain for secrets |
-| Shell command injection | Arbitrary code execution | Use argument arrays, never string interpolation |
-| Executable path from user input | Path traversal | Validate path exists and is expected executable |
-| Authorization prompt on every action | User fatigue | Cache authorization reference |
+| Export config with plaintext passwords | Credential exposure | Use Keychain or redact before export |
+| No URL scheme validation | Command injection | Validate all URL parameters strictly |
+| Backup stored in unsecured location | Data theft | Encrypt backup with user password |
+| Quick-connect without confirmation | Silent network connection | Always require user confirmation |
 
 ## UX Pitfalls
 
 | Pitfall | User Impact | Better Approach |
 |---------|-------------|-----------------|
-| No loading state on connect | User clicks multiple times | Show ProgressView during operation |
-| Generic error messages | User confused | Show actionable error with context |
-| Silent failures | User unaware of issues | Show Toast/Alert for operation outcomes |
-| Blocking operations | Beach ball, app feels slow | Move to background, show progress |
+| No import progress indication | User thinks app froze | Show progress bar for large configs |
+| Stats show stale data without indication | User has wrong expectations | Show "last updated" + stale indicators |
+| Auto-connect fails silently | User thinks feature broken | Show clear error with retry option |
+| Backup complete overwrite | User loses current configs | Prompt for merge vs replace |
 
 ## "Looks Done But Isn't" Checklist
 
-- [ ] **Timer cleanup:** Often missing `invalidate()` in `deinit` — verify all Timer properties are nil'd
-- [ ] **FileHandle cleanup:** Often missing `readabilityHandler = nil` — verify in stop() methods
-- [ ] **Combine subscriptions:** Often accumulating — verify subscriptions are in `init()` not methods
-- [ ] **Memory release:** Often holding references — verify `[weak self]` in all closures
-- [ ] **Error feedback:** Often silent failures — verify all error paths show user feedback
-- [ ] **Loading states:** Often missing — verify buttons show progress during async operations
+- [ ] **Config import:** Has schema validation — verify with malformed JSON
+- [ ] **Config export:** Excludes sensitive fields — check exported file for passwords
+- [ ] **Stats polling:** Uses throttling — verify no CPU spike in Instruments
+- [ ] **Stats stale state:** Shows last updated time — verify on disconnect
+- [ ] **Advanced settings:** No debug options exposed — check in release build
+- [ ] **Auto-connect:** Has network-ready check — verify on slow network
+- [ ] **URL scheme:** Uses reverse-DNS format — check for collisions
+- [ ] **Quick-connect:** Shows confirmation dialog — verify from test URL
+- [ ] **Backup:** Includes all app state — compare before/after folder
+- [ ] **Restore:** Prompts for merge vs replace — verify with existing configs
 
 ## Recovery Strategies
 
 | Pitfall | Recovery Cost | Recovery Steps |
 |---------|---------------|----------------|
-| Timer retain cycle | LOW | Add `deinit` with `timer?.invalidate()` |
-| Main thread blocking | MEDIUM | Wrap in `Task.detached` or background queue |
-| Subscription leak | MEDIUM | Move subscription creation to `init()` |
-| Unbounded array | LOW | Add circular buffer logic |
-| Missing loading state | LOW | Add `isLoading` state and ProgressView |
+| Invalid config import | LOW | Show error message, reject import, keep current config |
+| Credential in export | MEDIUM | Issue security advisory, add redaction, ask users to regenerate credentials |
+| Stats performance issue | LOW | Add throttling, reduce polling frequency |
+| Auto-connect failure | LOW | Add retry with delay, show clear status |
+| URL scheme conflict | MEDIUM | Change scheme to unique reverse-DNS format |
+| Backup data loss | HIGH | Implement versioning, add migration tests |
 
 ## Pitfall-to-Phase Mapping
 
 | Pitfall | Prevention Phase | Verification |
 |---------|------------------|--------------|
-| Main thread blocking | Phase 1 | Instruments Time Profiler shows no main thread stalls |
-| Timer retain cycles | Phase 2 | Xcode Memory Graph shows no leaked timers |
-| View identity issues | Phase 1 | No view reconstruction logs on state change |
-| Combine accumulation | Phase 2 | `cancellables.count` stable over time |
-| DispatchQueue overuse | Phase 1 | Code review removes redundant dispatch calls |
-| onAppear expensive init | Phase 1 | One-time initialization verified with breakpoints |
-| Log unbounded growth | Phase 2 | Memory stable after 1 hour runtime with logs |
-| NSAlert blocking | Phase 1 | UI remains responsive during error display |
+| Config import schema validation | Phase 1 | Test import with malformed JSON |
+| Config export sensitive data | Phase 1 | Verify exported file has no secrets |
+| Stats polling performance | Phase 2 | Profile CPU with stats view open |
+| Stats stale data indication | Phase 2 | Disconnect network, verify UI shows stale |
+| Advanced settings cleanup | Phase 3 | Release build should hide debug options |
+| Auto-connect timing | Phase 4 | Test on slow network boot |
+| Auto-connect consent | Phase 4 | Fresh install should have auto-connect off |
+| URL scheme security | Phase 5 | Verify reverse-DNS scheme + validation |
+| Quick-connect confirmation | Phase 5 | Trigger URL, verify confirmation dialog |
+| Backup completeness | Phase 6 | Restore on clean install, verify all state |
+| Backup versioning | Phase 6 | Restore old backup on new version |
+| Restore overwrite | Phase 6 | Test with existing configs present |
 
 ## Sources
 
-- Apple Developer Documentation: Swift Concurrency, MainActor
-- Apple Developer Documentation: Timer and Memory Management
-- SwiftUI Performance sessions (WWDC 2020-2024)
-- Hacking with Swift: Understanding @StateObject vs @ObservedObject
-- Swift by Sundell: Combine memory management patterns
-- Codebase analysis of EasyTierGUI (2025-04-24)
-- Personal experience with SwiftUI macOS application optimization
+- Apple Developer Documentation: SMAppService for Login Items
+- Apple Developer Documentation: URL Scheme Registration
+- OWASP: Generic URL Scheme Security Considerations
+- EasyTier GitHub: easytier-cli command documentation
+- WWDC 2023: SwiftUI Performance Best Practices
+- macOS Security: Authorization Services Best Practices
+- Codebase analysis of EasyTierGUI v1.0 (2026-04-24)
+- Personal experience with macOS app feature development
 
 ---
-*Pitfalls research for: Swift/SwiftUI macOS Performance Optimization*
-*Researched: 2025-04-24*
+*Pitfalls research for: VPN/Network Management macOS Application Feature Enhancement*
+*Researched: 2026-04-24*

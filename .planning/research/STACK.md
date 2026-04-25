@@ -1,159 +1,81 @@
 # Stack Research
 
-**Domain:** Swift/SwiftUI macOS Performance Optimization
-**Researched:** 2025-04-24
+**Domain:** macOS SwiftUI App Feature Enhancement
+**Researched:** 2026-04-24
 **Confidence:** HIGH
 
-## Performance Profiling Tools
+## Recommended Stack
 
-### Primary Tools
+### Core Technologies
 
-| Tool | Purpose | When to Use |
-|------|---------|-------------|
-| **Instruments - Time Profiler** | Identify CPU hotspots and main thread stalls | Startup analysis, connection blocking |
-| **Instruments - Allocations** | Track memory allocations, detect leaks | Memory growth investigation |
-| **Instruments - Leaks** | Automatic leak detection | Memory leak hunting |
-| **Xcode Memory Graph** | Visualize object references, find retain cycles | Debugging memory issues |
+| Technology | Version | Purpose | Why Recommended |
+|------------|---------|---------|-----------------|
+| Swift Charts | Native (macOS 13+, optimized for 14+) | Network stats visualization (topology, latency, bandwidth) | Native Apple framework, no external dependencies, optimized for SwiftUI |
+| SMAppService | Native (macOS 13+) | Auto-connect on startup (Login Items) | Replaces deprecated LSSharedFileList, official Apple API |
+| NSWorkspace | Native (AppKit) | Quick-connect desktop shortcuts | Create .app bundles or open URLs programmatically |
+| FileWrapper | Native (Foundation) | Backup/restore with directory structures | Handles file system objects for comprehensive backups |
 
-### Secondary Tools
+### Supporting Libraries
 
-| Tool | Purpose | When to Use |
-|------|---------|-------------|
-| **Instruments - System Trace** | System-level performance | Deep performance analysis |
-| **os_signpost** | Custom performance markers | Measuring specific code paths |
-| **Logger/OSLog** | Performance logging | Production diagnostics |
+| Library | Version | Purpose | When to Use |
+|---------|---------|---------|-------------|
+| (None required) | — | — | All features use native frameworks |
 
-## Swift Concurrency Stack
+### Development Tools
 
-### Core Components
+| Tool | Purpose | Notes |
+|------|---------|-------|
+| Xcode 15+ | SwiftUI + Swift Charts preview | Use Canvas for real-time chart preview |
+| easytier-cli | Peer stats retrieval | Poll for latency/bandwidth data (existing) |
 
-| Component | Version | Purpose |
-|-----------|---------|---------|
-| **async/await** | Swift 5.5+ | Structured concurrency |
-| **@MainActor** | Swift 5.5+ | Main thread isolation |
-| **Task** | Swift 5.5+ | Async task management |
-| **Task.sleep** | Swift 5.7+ | Cooperative cancellation |
-| **AsyncStream** | Swift 5.5+ | Async sequence handling |
+## Existing Capabilities (Reuse)
 
-### Best Practices
+| Feature | Existing Implementation | Notes |
+|---------|------------------------|-------|
+| Config import/export | `ConfigManager.exportConfig/importConfig` (lines 152-176) | Already implemented, just add UI |
+| Config backup/restore | `ConfigManager.exportAllConfigs/importConfigs` | Extend to include app preferences |
+| Advanced settings model | `EasyTierConfig` struct fields | Already exists: enableLatencyFirst, enablePrivateMode, etc. |
+| Peer info polling | `EasyTierService.pollPeers()` | Use for stats data source |
 
-1. **MainActor Isolation**
-   - All `ObservableObject` ViewModels should be `@MainActor`
-   - Services doing I/O should NOT be `@MainActor`
-   - Use `await MainActor.run { }` to return to main thread
+## What NOT to Use
 
-2. **Background Offloading**
-   - `DispatchQueue.global(qos: .userInitiated)` for user-triggered work
-   - `DispatchQueue.global(qos: .utility)` for background polling
-   - `Task.detached` for CPU-bound work
+| Avoid | Why | Use Instead |
+|-------|-----|-------------|
+| Charts library (第三方) | Not needed - Swift Charts is native and sufficient | Swift Charts |
+| Login Items (deprecated LSSharedFileList) | Deprecated since macOS 13 | SMAppService |
+| Third-party JSON libraries | Foundation.JSONEncoder/Decoder already used | Native Codable |
+| External graph visualization (e.g., D3) | Overkill for simple network stats | Swift Charts |
 
-3. **Continuation Pattern**
-   - Wrap synchronous blocking APIs in `withCheckedThrowingContinuation`
-   - Always resume continuation exactly once
-   - Handle both success and error paths
+## Stack Patterns by Variant
 
-## Combine Framework
+**If network stats require real-time streaming:**
+- Use Swift Charts with `@State` array append + timer
+- Throttle updates to 1-2 Hz to avoid UI overload
 
-### Memory Management
+**If quick-connect needs .app bundle shortcuts:**
+- Use NSWorkspace to create minimal .app in ~/Applications/
+- Or use `fsevents`/`NSWorkspace` to open deep-link URLs
 
-| Pattern | Purpose | Implementation |
-|---------|---------|----------------|
-| `Set<AnyCancellable>` | Store subscriptions | `var cancellables = Set<AnyCancellable>()` |
-| `.store(in:)` | Track subscription lifetime | `sink { }.store(in: &cancellables)` |
-| `cancellables.removeAll()` | Clean up | Call in `deinit` |
+**If backup needs include app preferences:**
+- Extend ConfigManager to export UserDefaults keys
+- Use FileWrapper for directory-based backup (configs + preferences.json)
 
-### Common Pitfalls
+## Version Compatibility
 
-- Creating subscriptions in methods (not init) → accumulation
-- Missing `[weak self]` in sink closures → retain cycles
-- Forgetting to store AnyCancellable → immediate cancellation
+| Package | Compatible With | Notes |
+|---------|-----------------|-------|
+| Swift Charts | macOS 13+ (basic), macOS 14+ (full features) | EasyTierGUI min is macOS 14, fully supported |
+| SMAppService | macOS 13+ | EasyTierGUI min is macOS 14, fully supported |
+| NSWorkspace | All macOS versions | No compatibility concerns |
 
-## SwiftUI Performance
+## Sources
 
-### Rendering Optimization
-
-| Technique | Purpose | When to Apply |
-|-----------|---------|---------------|
-| `Identifiable` | Stable row identity | All ForEach items |
-| `Equatable` | Prevent unnecessary rebuilds | Complex models |
-| `LazyVStack` | Render only visible | Large lists (>50 items) |
-| `.task {}` | View lifecycle async work | Data loading |
-
-### State Management
-
-| Property Wrapper | Ownership | Use Case |
-|------------------|-----------|----------|
-| `@StateObject` | View owns | ViewModel created by view |
-| `@ObservedObject` | External owns | ViewModel passed in |
-| `@EnvironmentObject` | Global | Shared state |
-
-## Process Management
-
-### Best Practices
-
-1. **Never run Process on main thread**
-   ```swift
-   DispatchQueue.global(qos: .userInitiated).async {
-       try process.run()
-   }
-   ```
-
-2. **Handle termination**
-   ```swift
-   process.terminationHandler = { [weak self] _ in
-       Task { @MainActor in
-           self?.handleProcessExit()
-       }
-   }
-   ```
-
-3. **Clean up FileHandles**
-   ```swift
-   process.standardOutput?.fileHandleForReading.readabilityHandler = nil
-   ```
-
-## Timer Management
-
-### Modern Pattern
-
-```swift
-private var peerTimer: Timer?
-
-func startPolling() {
-    peerTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { [weak self] _ in
-        Task { @MainActor in
-            self?.fetchPeers()
-        }
-    }
-}
-
-func stopPolling() {
-    peerTimer?.invalidate()
-    peerTimer = nil
-}
-
-deinit {
-    peerTimer?.invalidate()
-}
-```
-
-## Anti-Patterns to Avoid
-
-| Anti-Pattern | Problem | Alternative |
-|--------------|---------|-------------|
-| `DispatchQueue.main.async` in `@MainActor` | Redundant, ordering issues | Remove - already on main |
-| `[unowned self]` in timers | Crash if deallocated | Use `[weak self]` |
-| Index-based `ForEach` | State loss | Use `Identifiable` |
-| `@Published` for all state | Excessive re-renders | Only UI-affecting state |
-| Timer without invalidate | Memory leak | Always invalidate in deinit |
-
-## Recommended Toolchain
-
-- **Xcode 15+** with Swift 5.9
-- **Instruments** for profiling
-- **Memory Graph Debugger** for leaks
-- **OSLog** for production diagnostics
+- Apple Swift Charts Documentation — https://developer.apple.com/documentation/charts
+- Apple SMAppService Documentation — https://developer.apple.com/documentation/servicemanagement
+- Apple NSWorkspace Documentation — https://developer.apple.com/documentation/appkit/nsworkspace
+- Project existing code — ConfigManager.swift (import/export), Models.swift (config fields)
 
 ---
-*Stack research for: Swift/SwiftUI macOS Performance Optimization*
-*Researched: 2025-04-24*
+
+*Stack research for: EasyTier GUI v1.1 Feature Enhancement*
+*Researched: 2026-04-24*
