@@ -28,6 +28,7 @@
 			A10000000000000000000013 /* ToastView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000015 /* ToastView.swift */; };
 			A10000000000000000000014 /* TopologyCanvas.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000016 /* TopologyCanvas.swift */; };
 			A10000000000000000000015 /* CollapsibleTopologyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000017 /* CollapsibleTopologyView.swift */; };
+			A10000000000000000000016 /* BackupService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000018 /* BackupService.swift */; };
 
 /* Begin PBXFileReference section */
 		A20000000000000000000001 /* EasyTierGUIApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EasyTierGUIApp.swift; sourceTree = "<group>"; };
@@ -53,6 +54,7 @@
 			A20000000000000000000015 /* ToastView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToastView.swift; sourceTree = "<group>"; };
 			A20000000000000000000016 /* TopologyCanvas.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TopologyCanvas.swift; sourceTree = "<group>"; };
 			A20000000000000000000017 /* CollapsibleTopologyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollapsibleTopologyView.swift; sourceTree = "<group>"; };
+			A20000000000000000000018 /* BackupService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupService.swift; sourceTree = "<group>"; };
 			A30000000000000000000001 /* EasyTierGUI.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = EasyTierGUI.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -124,6 +126,7 @@
 				A20000000000000000000011 /* BinaryManager.swift */,
 				A2000000000000000000000D /* PrivilegedExecutor.m */,
 				A2000000000000000000000E /* PrivilegedExecutor.h */,
+				A20000000000000000000018 /* BackupService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -235,6 +238,7 @@
 				A10000000000000000000013 /* ToastView.swift in Sources */,
 				A10000000000000000000014 /* TopologyCanvas.swift in Sources */,
 				A10000000000000000000015 /* CollapsibleTopologyView.swift in Sources */,
+				A10000000000000000000016 /* BackupService.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

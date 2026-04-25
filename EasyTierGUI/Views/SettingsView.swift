@@ -7,6 +7,7 @@
 
 import SwiftUI
 import ServiceManagement
+import UniformTypeIdentifiers
 
 // MARK: - SettingsView
 
@@ -24,6 +25,10 @@ struct SettingsView: View {
     @State private var showVisibilityAlert = false
     @State private var showResetConfirmation = false
     @State private var appear = false
+
+    // MARK: - Backup State
+    @State private var lastBackupDate: Date?
+    private let backupService = BackupService()
 
     var body: some View {
         VStack(spacing: 0) {
@@ -84,6 +89,28 @@ struct SettingsView: View {
                                 vm.setLogMonitoringEnabled(newValue)
                             }
                         ))
+                    }
+                    .opacity(appear ? 1 : 0)
+                    .offset(y: appear ? 0 : 10)
+
+                    // MARK: - 备份与恢复 Section
+                    Section(header: Text("备份与恢复").font(.system(.subheadline, design: .rounded))) {
+                        HStack(spacing: 12) {
+                            Button("备份设置") {
+                                performBackup()
+                            }
+
+                            Button("恢复设置") {
+                                performRestore()
+                            }
+                        }
+
+                        if let lastBackupDate = lastBackupDate {
+                            LabeledContent("上次备份") {
+                                Text(lastBackupDate, style: .date)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
                     }
                     .opacity(appear ? 1 : 0)
                     .offset(y: appear ? 0 : 10)
@@ -281,6 +308,44 @@ struct SettingsView: View {
             try binaryManager.clearInstalledVersion()
         } catch {
             print("Failed to reset: \(error)")
+        }
+    }
+
+    // MARK: - Backup Actions
+
+    private func performBackup() {
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = [UTType.json]
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        panel.nameFieldStringValue = "EasyTierGUI-Backup-\(dateFormatter.string(from: Date())).json"
+        panel.canCreateDirectories = true
+
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+
+        do {
+            try backupService.exportBackup(to: url, configManager: vm.configManager)
+            lastBackupDate = Date()
+            vm.showToast("备份成功", type: .info)
+        } catch {
+            vm.showToast("备份失败: \(error.localizedDescription)", type: .error)
+        }
+    }
+
+    private func performRestore() {
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [UTType.json]
+        panel.allowsMultipleSelection = false
+        panel.message = "恢复将覆盖所有现有配置和偏好设置"
+
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+
+        do {
+            let backup = try backupService.importBackup(from: url)
+            backupService.applyBackup(backup, configManager: vm.configManager)
+            vm.showToast("恢复成功", type: .info)
+        } catch {
+            vm.showToast("恢复失败: \(error.localizedDescription)", type: .error)
         }
     }
 }
