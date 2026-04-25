@@ -46,11 +46,12 @@
 
 ### Phase 5: Network Statistics
 **Requirements:** STAT-01, STAT-02, STAT-03, STAT-04, STAT-05
-**Status:** Pending
+**Status:** ✅ Complete (2026-04-25)
 
-- NetworkStats/PeerStats models
-- NetworkStatsService with 2-second polling
-- StatsView with latency, bandwidth, topology
+- Network topology visualization with radial layout
+- Latency color coding (green <50ms, orange <150ms, red >=150ms)
+- Stale data detection and visual feedback
+- STAT-02 (bytes sent/received) deferred to v2
 
 ### Phase 6: Auto-Connect & Settings Backup
 **Requirements:** AUTO-01, AUTO-02, AUTO-03, AUTO-04, AUTO-05, SETT-01, SETT-02, SETT-03
@@ -78,7 +79,7 @@
 | Phase | Milestone | Requirements | Status |
 |-------|-----------|--------------|--------|
 | 4 | Config I/O | CONF-01~CONF-06 | Pending |
-| 5 | Network Stats | STAT-01~STAT-05 | Pending |
+| 5 | Network Stats | STAT-01~STAT-05 | ✅ Complete (2026-04-25) |
 | 6 | Auto-Connect & Backup | AUTO-01~AUTO-05, SETT-01~SETT-03 | Pending |
 | 7 | Advanced Settings & Quick-Connect | SETT-04~SETT-06, QUICK-01~QUICK-05 | Pending |
 
