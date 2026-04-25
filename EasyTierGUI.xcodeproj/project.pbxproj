@@ -26,6 +26,8 @@
 			A10000000000000000000011 /* UpdateBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000013 /* UpdateBanner.swift */; };
 			A10000000000000000000012 /* easytier in Resources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000014 /* easytier */; };
 			A10000000000000000000013 /* ToastView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000015 /* ToastView.swift */; };
+			A10000000000000000000014 /* TopologyCanvas.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000016 /* TopologyCanvas.swift */; };
+			A10000000000000000000015 /* CollapsibleTopologyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000017 /* CollapsibleTopologyView.swift */; };
 
 /* Begin PBXFileReference section */
 		A20000000000000000000001 /* EasyTierGUIApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EasyTierGUIApp.swift; sourceTree = "<group>"; };
@@ -49,6 +51,8 @@
 			A20000000000000000000013 /* UpdateBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateBanner.swift; sourceTree = "<group>"; };
 			A20000000000000000000014 /* easytier */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Resources/easytier; sourceTree = "<group>"; };
 			A20000000000000000000015 /* ToastView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToastView.swift; sourceTree = "<group>"; };
+			A20000000000000000000016 /* TopologyCanvas.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TopologyCanvas.swift; sourceTree = "<group>"; };
+			A20000000000000000000017 /* CollapsibleTopologyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollapsibleTopologyView.swift; sourceTree = "<group>"; };
 			A30000000000000000000001 /* EasyTierGUI.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = EasyTierGUI.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -102,6 +106,8 @@
 				A20000000000000000000009 /* LogView.swift */,
 				A2000000000000000000000A /* SettingsView.swift */,
 				A20000000000000000000015 /* ToastView.swift */,
+				A20000000000000000000016 /* TopologyCanvas.swift */,
+				A20000000000000000000017 /* CollapsibleTopologyView.swift */,
 				A50000000000000000000007 /* Components */,
 			);
 			path = Views;
@@ -227,6 +233,8 @@
 				A10000000000000000000010 /* GitHubReleaseService.swift in Sources */,
 				A10000000000000000000011 /* UpdateBanner.swift in Sources */,
 				A10000000000000000000013 /* ToastView.swift in Sources */,
+				A10000000000000000000014 /* TopologyCanvas.swift in Sources */,
+				A10000000000000000000015 /* CollapsibleTopologyView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -8,6 +8,7 @@ struct PeersView: View {
     @EnvironmentObject var vm: ProcessViewModel
     @State private var searchText = ""
     @State private var sortKey: SortKey = .ipv4
+    @State private var isTopologyExpanded: Bool = false
 
     private var selectedConfigIndex: Binding<Int> {
         Binding(
@@ -59,6 +60,18 @@ struct PeersView: View {
     var body: some View {
         VStack(spacing: 0) {
             VStack(spacing: 0) {
+                // NEW: Collapsible topology section
+                if vm.activeRuntime?.service.isRunning == true || !vm.peers.isEmpty {
+                    CollapsibleTopologyView(
+                        isExpanded: $isTopologyExpanded,
+                        peers: vm.peers,
+                        localNode: LocalNodeInfo(
+                            hostname: Host.current().localizedName ?? "本机",
+                            ipv4: "127.0.0.1"
+                        )
+                    )
+                }
+
                 // Toolbar
                 HStack(spacing: CGFloat.spacingM) {
                     if !vm.configManager.configs.isEmpty {
