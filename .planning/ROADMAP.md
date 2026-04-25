@@ -9,7 +9,7 @@
 ## Milestones
 
 - ✅ **v1.0 Performance Optimization** — Phases 1-3 (shipped 2026-04-24)
-- 🔄 **v1.1 Feature Enhancement** — Phases 4-7 (in progress)
+- ✅ **v1.1 Feature Enhancement** — Phases 4-7 (shipped 2026-04-25)
 
 ---
 
@@ -31,42 +31,19 @@
 
 </details>
 
----
-
 <details>
-<summary>🔄 v1.1 Feature Enhancement (Phases 4-7) — IN PROGRESS</summary>
+<summary>✅ v1.1 Feature Enhancement (Phases 4-7) — SHIPPED 2026-04-25</summary>
 
-### Phase 4: Config Import/Export Foundation
-**Requirements:** CONF-01, CONF-02, CONF-03, CONF-04, CONF-05, CONF-06
-**Status:** Pending
+- [x] Phase 4: Config Import/Export (1/1 plan) — completed 2026-04-25
+- [x] Phase 5: Network Statistics (2/2 plans) — completed 2026-04-25
+- [x] Phase 6: Auto-Connect & Backup (2/2 plans) — completed 2026-04-25
+- [x] Phase 7: Advanced Settings & Quick-Connect — skipped by user
 
-- Config export service with sensitive data redaction
-- Config import service with schema validation
-- Export/import UI with file picker
-
-### Phase 5: Network Statistics
-**Requirements:** STAT-01, STAT-02, STAT-03, STAT-04, STAT-05
-**Status:** ✅ Complete (2026-04-25)
-
-- Network topology visualization with radial layout
-- Latency color coding (green <50ms, orange <150ms, red >=150ms)
-- Stale data detection and visual feedback
-- STAT-02 (bytes sent/received) deferred to v2
-
-### Phase 6: Auto-Connect & Settings Backup
-**Requirements:** AUTO-01, AUTO-02, AUTO-03, AUTO-04, AUTO-05, SETT-01, SETT-02, SETT-03
-**Status:** Pending
-
-- SMAppService integration for login items
-- Last-used config persistence
-- Network readiness check with delay
-- BackupService for full config/preferences backup
-
-### Phase 7: Advanced Settings & Quick-Connect
-**Requirements:** SETT-04, SETT-05, SETT-06, QUICK-01, QUICK-02, QUICK-03, QUICK-04, QUICK-05
-**Status:** ⏭️ Skipped (2026-04-25)
-
-User decided not to implement advanced settings and quick-connect features.
+**Key Accomplishments:**
+- Config import/export with password exclusion option and Toast feedback
+- Network topology visualization with latency color coding
+- Auto-connect with network readiness check and retry mechanism
+- Full backup/restore for configs and preferences
 
 </details>
 
@@ -74,17 +51,13 @@ User decided not to implement advanced settings and quick-connect features.
 
 ## Progress
 
-| Phase | Milestone | Requirements | Status |
-|-------|-----------|--------------|--------|
-| 4 | Config I/O | CONF-01~CONF-06 | Pending |
-| 5 | Network Stats | STAT-01~STAT-05 | ✅ Complete (2026-04-25) |
-| 6 | Auto-Connect & Backup | AUTO-01~AUTO-05, SETT-01~SETT-03 | Pending |
-| 7 | Advanced Settings & Quick-Connect | SETT-04~SETT-06, QUICK-01~QUICK-05 | ⏭️ Skipped (2026-04-25) |
-
-**v1.1 Coverage:** 27/27 requirements (100%)
+| Phase | Milestone | Status |
+|-------|-----------|--------|
+| 1-3 | v1.0 Performance | ✅ Shipped 2026-04-24 |
+| 4-7 | v1.1 Feature Enhancement | ✅ Shipped 2026-04-25 |
 
 ---
 
 *Roadmap created: 2025-04-24*
 *v1.0 shipped: 2026-04-24*
-*v1.1 started: 2026-04-24*
+*v1.1 shipped: 2026-04-25*

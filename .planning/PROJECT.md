@@ -1,20 +1,18 @@
 # EasyTier GUI 优化项目
 
-## Current Milestone: v1.1 Feature Enhancement
+## Current Milestone: Planning Next Version
 
-**Goal:** Add user-requested features to enhance EasyTier GUI usability for both beginners and power users.
+**Last Shipped:** v1.1 Feature Enhancement (2026-04-25)
 
-**Target features:**
-- Config import/export — Share network configurations between machines
-- Network stats — Visualize topology, latency, bandwidth
-- Advanced settings — Protocol options, peer config, debugging
-- Auto-connect on startup — Remember and auto-start last network
-- Quick-connect shortcuts — Desktop shortcuts to specific networks
-- Settings backup/restore — Backup all configs and app settings
+**Key features delivered:**
+- Config import/export with password exclusion option
+- Network topology visualization with latency color coding
+- Auto-connect with network readiness check
+- Full backup/restore for configs and preferences
 
 ## What This Is
 
-EasyTier GUI 的功能增强版本。这是一个 macOS 原生应用，为 EasyTier P2P VPN 提供图形界面。v1.0 已完成性能优化，v1.1 将添加用户请求的新功能：配置导入导出、网络统计、高级设置、自动连接、快捷方式、备份恢复。
+EasyTier GUI 的 macOS 原生应用，为 EasyTier P2P VPN 提供图形界面。已发布 v1.0 性能优化和 v1.1 功能增强版本。
 
 ## Core Value
 
@@ -35,7 +33,7 @@ EasyTier GUI 的功能增强版本。这是一个 macOS 原生应用，为 EasyT
 - ✓ 权限提升执行 — PrivilegedExecutor (Objective-C 桥接)
 - ✓ 通用二进制支持 — arm64 + x86_64
 
-<!-- v1.0 新验证的需求 -->
+<!-- v1.0 性能优化需求 -->
 
 - ✓ **PERF-01**: 启动时无卡顿，快速响应 — v1.0 Phase 1
 - ✓ **PERF-02**: 连接/断开操作流畅，无 spinning ball — v1.0 Phase 1
@@ -62,24 +60,26 @@ EasyTier GUI 的功能增强版本。这是一个 macOS 原生应用，为 EasyT
 - ✓ **UI-04**: 节点列表信息完整易读 — v1.0 Phase 3
 - ✓ **UI-05**: 日志视图颜色区分，易读性好 — v1.0 Phase 3
 
+<!-- v1.1 已验证的功能 -->
+
+- ✓ **CONF-01~CONF-06**: 配置导入导出 — v1.1 Phase 4
+- ✓ **STAT-01, STAT-03~STAT-05**: 网络统计可视化 — v1.1 Phase 5
+- ✓ **AUTO-01~AUTO-05**: 自动连接功能 — v1.1 Phase 6
+- ✓ **SETT-01~SETT-03**: 备份恢复功能 — v1.1 Phase 6
+
 ### Active
 
-<!-- v1.1 目标 -->
+<!-- 下一个里程碑的需求 -->
 
-- [ ] **FEAT-01**: 用户可以导入/导出网络配置文件
-- [ ] **FEAT-02**: 用户可以查看网络拓扑、延迟、带宽统计
-- [ ] **FEAT-03**: 用户可以配置高级选项（协议、peer 配置、调试选项）
-- [ ] **FEAT-04**: 用户可以设置应用启动时自动连接上次网络
-- [ ] **FEAT-05**: 用户可以创建桌面快捷方式快速连接特定网络
-- [ ] **FEAT-06**: 用户可以备份/恢复应用设置和所有网络配置
+(待定义)
 
 ### Out of Scope
 
-<!-- 明确不在本次范围内 -->
+<!-- 明确不在当前范围内 -->
 
 - 新协议支持 — 需要 EasyTier core 更新
 - 跨平台支持 — 仅关注 macOS
-- 国际化/本地化 — 不在本次范围
+- 国际化/本地化 — 不在当前范围
 - 单元测试覆盖 — 可作为后续工作
 - 重写整个应用 — 保持现有架构，增量添加功能
 
@@ -87,11 +87,11 @@ EasyTier GUI 的功能增强版本。这是一个 macOS 原生应用，为 EasyT
 
 ### 当前状态
 
-**Shipped v1.0** — 2026-04-24
+**Shipped v1.1** — 2026-04-25
 
-- 3 phases, 15 plans, 50 commits
-- 5,703 Swift LOC
-- All 24 v1 requirements verified
+- 4 phases, 5 plans
+- 6,017 Swift LOC
+- 19 requirements implemented
 
 **技术栈:** Swift 5.9 + SwiftUI + Combine + AppKit
 
@@ -102,6 +102,16 @@ EasyTier GUI 的功能增强版本。这是一个 macOS 原生应用，为 EasyT
 - ✅ 内存增长 → Combine/Timer/FileHandle 正确清理
 - ✅ 交互反馈缺失 → 按钮加载状态 + Toast 通知
 - ✅ UI 不够原生 → macOS HIG 8pt grid + SF Symbols
+- ✅ 无导入导出 → ConfigManager 增强 + Toast 反馈
+- ✅ 无网络可视化 → TopologyCanvas + 延迟颜色编码
+- ✅ 无自动连接 → lastConnectedConfigId + 网络就绪检测
+- ✅ 无备份功能 → BackupService + Settings UI
+
+### 已延期功能
+
+- STAT-02: 带宽统计 (bytes sent/received) — 延期至 v2
+- SETT-04~SETT-06: 高级设置 UI — Phase 7 跳过
+- QUICK-01~QUICK-05: 快捷连接功能 — Phase 7 跳过
 
 ### 技术债务
 
@@ -126,10 +136,14 @@ EasyTier GUI 的功能增强版本。这是一个 macOS 原生应用，为 EasyT
 | Toast 通知替代 Alert | D-05: 非阻塞错误提示 | ✓ Good |
 | 延迟权限请求 | D-02: 仅在连接时提示，减少启动干扰 | ✓ Good |
 | 日志节流 100ms | 防止 UI 过度渲染 | ✓ Good |
+| 直接覆盖冲突处理 | D-03: 简化导入流程 | ✓ Good |
+| 简化径向拓扑布局 | D-03: 本机为中心，peer 环绕 | ✓ Good |
+| 网络就绪检测 + 超时 | D-02: 30s 超时避免长时间等待 | ✓ Good |
+| 上次使用单个配置记忆 | D-01: 不支持每配置自动连接 | ✓ Good |
 
 ## Evolution
 
 This document evolves at phase transitions and milestone boundaries.
 
 ---
-*Last updated: 2026-04-24 after starting v1.1 milestone*
+*Last updated: 2026-04-25 after v1.1 milestone shipped*
