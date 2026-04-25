@@ -52,6 +52,11 @@ class ConfigManager: ObservableObject {
         loadConfigs()
     }
 
+    deinit {
+        // Cancel any pending save work item to prevent execution after deallocation
+        pendingSaveWorkItem?.cancel()
+    }
+
     private func createConfigsDirectoryIfNeeded() {
         if !FileManager.default.fileExists(atPath: configsDirectory.path) {
             try? FileManager.default.createDirectory(at: configsDirectory, withIntermediateDirectories: true)

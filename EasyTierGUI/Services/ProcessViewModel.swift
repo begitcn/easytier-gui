@@ -121,6 +121,7 @@ final class NetworkRuntime: ObservableObject, Identifiable {
         }
 
         isDisconnecting = true
+        onStateChange?()  // 立即通知 UI 更新断开中状态
         defer { isDisconnecting = false }
 
         do {
@@ -164,13 +165,20 @@ final class NetworkRuntime: ObservableObject, Identifiable {
 
     private func fetchPeers() {
         guard let port = currentRPCPortalPort else {
-            peers = []
+            // Don't clear peers if service is running - keep showing stale data
+            // This prevents UI flicker during transient polling issues
             return
         }
 
         service.fetchPeers(rpcPortalPort: port) { [weak self] newPeers in
             DispatchQueue.main.async {
                 guard let self = self else { return }
+
+                // Don't clear existing peers if new result is empty
+                // Keep showing last known data until we get valid new data
+                // This prevents UI flicker during transient CLI failures
+                guard !newPeers.isEmpty else { return }
+
                 let now = Date()
                 if self.peers != newPeers {
                     self.peers = newPeers.map { peer in
@@ -263,6 +271,13 @@ class ProcessViewModel: ObservableObject {
 
     deinit {
         dailyUpdateCheckTask?.cancel()
+        // Cancel all Combine subscriptions
+        cancellables.removeAll()
+        // Stop all running services explicitly
+        for runtime in runtimes.values {
+            runtime.service.forceStop(allowPrivilegePrompt: false)
+        }
+        runtimes.removeAll()
     }
 
     // MARK: - Core Detection
@@ -332,11 +347,22 @@ class ProcessViewModel: ObservableObject {
         activeRuntime?.status ?? .disconnected
     }
 
-    /// Last connected config ID from UserDefaults
+    /// Last connected config IDs from UserDefaults (all running networks)
+    var lastConnectedConfigIds: [UUID] {
+        guard let strings = UserDefaults.standard.stringArray(forKey: "lastConnectedConfigIds") else {
+            // Fallback to legacy single ID for migration
+            if let string = UserDefaults.standard.string(forKey: "lastConnectedConfigId"),
+               let uuid = UUID(uuidString: string) {
+                return [uuid]
+            }
+            return []
+        }
+        return strings.compactMap { UUID(uuidString: $0) }
+    }
+
+    /// Last connected config ID from UserDefaults (for backward compatibility)
     var lastConnectedConfigId: UUID? {
-        guard let string = UserDefaults.standard.string(forKey: "lastConnectedConfigId"),
-              let uuid = UUID(uuidString: string) else { return nil }
-        return uuid
+        lastConnectedConfigIds.first
     }
 
     /// Last connected config name
@@ -352,7 +378,12 @@ class ProcessViewModel: ObservableObject {
     // MARK: - Status Helpers
 
     func status(for config: EasyTierConfig) -> NetworkStatus {
-        runtimeIfExists(for: config.id)?.status ?? .disconnected
+        guard let runtime = runtimeIfExists(for: config.id) else { return .disconnected }
+        // 断开中状态优先显示
+        if runtime.isDisconnecting {
+            return .disconnecting
+        }
+        return runtime.status
     }
 
     func errorMessage(for config: EasyTierConfig) -> String? {
@@ -402,14 +433,23 @@ class ProcessViewModel: ObservableObject {
         }
     }
 
-    /// Connect to the last used configuration
+    /// Connect to all previously running configurations
     func connectLastUsed() async -> Bool {
-        guard let configIdString = UserDefaults.standard.string(forKey: "lastConnectedConfigId"),
-              let configId = UUID(uuidString: configIdString),
-              configManager.configs.contains(where: { $0.id == configId }) else {
-            return false
+        let configIds = lastConnectedConfigIds
+        let validIds = configIds.filter { id in
+            configManager.configs.contains(where: { $0.id == id })
         }
-        await connect(configID: configId)
+
+        guard !validIds.isEmpty else { return false }
+
+        // Connect all previously running networks
+        for (index, configId) in validIds.enumerated() {
+            if index > 0 {
+                // Add a small delay between connections
+                try? await Task.sleep(nanoseconds: 1_500_000_000) // 1.5 seconds
+            }
+            await connect(configID: configId, saveToRunningList: false)
+        }
         return true
     }
 
@@ -430,7 +470,8 @@ class ProcessViewModel: ObservableObject {
         activeRuntime?.refreshPeers()
     }
 
-    func connect(configID: UUID) async {
+    /// Connect with option to skip saving to running list
+    func connect(configID: UUID, saveToRunningList: Bool = true) async {
         guard let config = configManager.configs.first(where: { $0.id == configID }) else { return }
         let runtime = ensureRuntime(for: configID)
 
@@ -473,9 +514,9 @@ class ProcessViewModel: ObservableObject {
         await runtime.connect(config: config)
         refreshOverallStatus()
 
-        // Save last connected config ID for auto-connect
-        if runtime.status == .connected {
-            UserDefaults.standard.set(configID.uuidString, forKey: "lastConnectedConfigId")
+        // Update running list when a network connects successfully
+        if saveToRunningList && runtime.status == .connected {
+            saveRunningConfigIds()
         }
 
         // Show toast with retry for authorization errors
@@ -487,6 +528,16 @@ class ProcessViewModel: ObservableObject {
         }
     }
 
+    func connect(configID: UUID) async {
+        await connect(configID: configID, saveToRunningList: true)
+    }
+
+    /// Save all currently running config IDs for auto-connect on next launch
+    func saveRunningConfigIds() {
+        let runningIds = runtimes.filter { $0.value.service.isRunning }.keys.map { $0.uuidString }
+        UserDefaults.standard.set(runningIds, forKey: "lastConnectedConfigIds")
+    }
+
     func disconnect(configID: UUID) async {
         guard let runtime = runtimes[configID] else { return }
         // 如果该配置正在操作中，直接返回
@@ -495,6 +546,8 @@ class ProcessViewModel: ObservableObject {
         }
         await runtime.disconnect()
         refreshOverallStatus()
+        // Update the saved list when a network is disconnected
+        saveRunningConfigIds()
     }
 
     func toggleConnection() async {
@@ -627,10 +680,13 @@ class ProcessViewModel: ObservableObject {
 
     private func refreshOverallStatus() {
         let statuses = runtimes.values.map(\.status)
+        let hasDisconnecting = runtimes.values.contains { $0.isDisconnecting }
         let detailedStatuses = configManager.configs.map { (name: $0.name, status: status(for: $0)) }
 
         if statuses.contains(.error) {
             status = .error
+        } else if hasDisconnecting {
+            status = .disconnecting
         } else if statuses.contains(.connecting) {
             status = .connecting
         } else if statuses.contains(.connected) {

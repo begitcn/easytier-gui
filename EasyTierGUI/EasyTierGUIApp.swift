@@ -174,6 +174,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var openMainWindowAction: (() -> Void)?
 
     func applicationWillTerminate(_ notification: Notification) {
+        // Save all running config IDs before stopping for auto-connect on next launch
+        processVM?.saveRunningConfigIds()
+
         // Stop processes on exit without triggering a new password prompt.
         processVM?.forceStopAllSync(allowPrivilegePrompt: false)
 

@@ -75,6 +75,7 @@ class MenuBarManager: ObservableObject {
         switch status {
         case .disconnected: symbolName = "network.slash"
         case .connecting:   symbolName = "network.connect"
+        case .disconnecting: symbolName = "network.connect"
         case .connected:    symbolName = "network"
         case .error:        symbolName = "exclamationmark.triangle"
         }
@@ -157,6 +158,9 @@ class MenuBarManager: ObservableObject {
                     dotColor = .systemGreen
                     dotSymbol = "●"
                 case .connecting:
+                    dotColor = .systemOrange
+                    dotSymbol = "●"
+                case .disconnecting:
                     dotColor = .systemOrange
                     dotSymbol = "●"
                 case .disconnected, .error:

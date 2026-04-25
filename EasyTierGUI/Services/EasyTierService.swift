@@ -64,6 +64,7 @@ class EasyTierService: ObservableObject {
 
     private let maxLogEntries = 100       // 最大日志条数
     private let maxLogMessageLength = 2000
+    private let maxPendingLogLines = 500  // 最大待处理日志行数，防止内存溢出
 
     // MARK: - Log Update Throttling
 
@@ -471,6 +472,10 @@ class EasyTierService: ObservableObject {
         for line in lines where !line.trimmingCharacters(in: .whitespaces).isEmpty {
             pendingLogLines.append(line)
         }
+        // Prevent unbounded memory growth by limiting pending lines
+        if pendingLogLines.count > maxPendingLogLines {
+            pendingLogLines.removeFirst(pendingLogLines.count - maxPendingLogLines)
+        }
         pendingLogLock.unlock()
 
         // Throttle UI update
@@ -700,6 +705,9 @@ class EasyTierService: ObservableObject {
         // Clean up timer if still running
         privilegedLogTimer?.invalidate()
         privilegedLogTimer = nil
+        // Clean up pipe readability handler to prevent callbacks on deallocated self
+        outputPipe?.fileHandleForReading.readabilityHandler = nil
+        outputPipe = nil
 #if DEBUG
         print("[DEBUG] EasyTierService deinit - \(privilegedPID != nil ? "privileged" : "normal")")
 #endif

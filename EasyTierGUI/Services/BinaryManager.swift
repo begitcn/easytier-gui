@@ -256,10 +256,10 @@ final class BinaryManager: ObservableObject {
         // 下载
         let zipFile = try await GitHubReleaseService.shared.downloadBinary(
             version: version,
-            progress: { progress in
-                Task { @MainActor in
-                    self.downloadProgress = progress
-                    self.updateState = .downloading(progress)
+            progress: { [weak self] progress in
+                Task { @MainActor [weak self] in
+                    self?.downloadProgress = progress
+                    self?.updateState = .downloading(progress)
                 }
             }
         )

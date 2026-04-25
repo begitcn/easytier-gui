@@ -8,7 +8,6 @@ struct PeersView: View {
     @EnvironmentObject var vm: ProcessViewModel
     @State private var searchText = ""
     @State private var sortKey: SortKey = .ipv4
-    @State private var isTopologyExpanded: Bool = false
 
     private var selectedConfigIndex: Binding<Int> {
         Binding(
@@ -60,18 +59,6 @@ struct PeersView: View {
     var body: some View {
         VStack(spacing: 0) {
             VStack(spacing: 0) {
-                // NEW: Collapsible topology section
-                if vm.activeRuntime?.service.isRunning == true || !vm.peers.isEmpty {
-                    CollapsibleTopologyView(
-                        isExpanded: $isTopologyExpanded,
-                        peers: vm.peers,
-                        localNode: LocalNodeInfo(
-                            hostname: Host.current().localizedName ?? "本机",
-                            ipv4: "127.0.0.1"
-                        )
-                    )
-                }
-
                 // Toolbar
                 HStack(spacing: CGFloat.spacingM) {
                     if !vm.configManager.configs.isEmpty {
@@ -82,6 +69,10 @@ struct PeersView: View {
                         }
                         .pickerStyle(.menu)
                         .frame(width: 160)
+                    } else {
+                        // Placeholder to maintain consistent layout when no configs
+                        Text("节点")
+                            .font(.system(.body, design: .rounded).weight(.medium))
                     }
 
                     HStack {
@@ -118,24 +109,35 @@ struct PeersView: View {
                 .padding(CGFloat.cardPadding)
 
                 // Peer List
-                if  filteredPeers.isEmpty && vm.activeConfig == nil {
+                if vm.activeConfig == nil {
                     ContentUnavailableView(
                         "未选择虚拟网络",
                         systemImage: "rectangle.stack.badge.person.crop",
                         description: Text("请先在当前页面左上方选择一个虚拟网络")
                     )
                     .frame(maxHeight: .infinity)
-                } else if filteredPeers.isEmpty && !(vm.activeRuntime?.service.isRunning ?? false) {
-                    // Show empty state only if there are truly no peers (not even stale ones)
-                    if vm.peers.isEmpty {
-                        ContentUnavailableView(
-                            "未连接网络",
-                            systemImage: "network.slash",
-                            description: Text("启动 EasyTier 以查看已连接的节点")
-                        )
-                        .frame(maxHeight: .infinity)
+                } else if !(vm.activeRuntime?.service.isRunning ?? false) {
+                    // Network not running - show empty state
+                    ContentUnavailableView(
+                        "未连接网络",
+                        systemImage: "network.slash",
+                        description: Text("启动 EasyTier 以查看已连接的节点")
+                    )
+                    .frame(maxHeight: .infinity)
+                } else if vm.peers.isEmpty {
+                    // Network running but no peers yet - keep waiting silently
+                    // Don't show any placeholder, just show empty list with header
+                    VStack(spacing: 0) {
+                        peerTableHeader
+                        Divider()
+                        List {
+                            EmptyView()
+                        }
+                        .listStyle(.plain)
+                        .scrollContentBackground(.hidden)
                     }
-                } else if filteredPeers.isEmpty {
+                } else if filteredPeers.isEmpty && !searchText.isEmpty {
+                    // Has peers but filtered out by search - only show when actively searching
                     ContentUnavailableView(
                         "未找到节点",
                         systemImage: "magnifyingglass",
@@ -144,32 +146,7 @@ struct PeersView: View {
                     .frame(maxHeight: .infinity)
                 } else {
                     VStack(spacing: 0) {
-                        // 表头
-                        HStack(spacing: CGFloat.spacingM) {
-                            Text("主机名")
-                                .font(.system(.caption, design: .rounded).weight(.semibold))
-                                .foregroundColor(.secondary)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-
-                            Text("IPv4")
-                                .font(.system(.caption, design: .rounded).weight(.semibold))
-                                .foregroundColor(.secondary)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-
-                            Text("延迟")
-                                .font(.system(.caption, design: .rounded).weight(.semibold))
-                                .foregroundColor(.secondary)
-                                .frame(width: 90, alignment: .trailing)
-
-                            Text("连接方式")
-                                .font(.system(.caption, design: .rounded).weight(.semibold))
-                                .foregroundColor(.secondary)
-                                .frame(width: 80, alignment: .center)
-                        }
-                        .padding(.horizontal, 24)
-                        .padding(.vertical, 8)
-                        .background(Color(NSColor.controlBackgroundColor).opacity(0.5))
-
+                        peerTableHeader
                         Divider()
 
                         // 节点列表
@@ -205,6 +182,34 @@ struct PeersView: View {
 
     private func formatLatency(_ ms: Double) -> String {
         String(format: "%.2f", ms)
+    }
+
+    @ViewBuilder
+    private var peerTableHeader: some View {
+        HStack(spacing: CGFloat.spacingM) {
+            Text("主机名")
+                .font(.system(.caption, design: .rounded).weight(.semibold))
+                .foregroundColor(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            Text("IPv4")
+                .font(.system(.caption, design: .rounded).weight(.semibold))
+                .foregroundColor(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            Text("延迟")
+                .font(.system(.caption, design: .rounded).weight(.semibold))
+                .foregroundColor(.secondary)
+                .frame(width: 90, alignment: .trailing)
+
+            Text("连接方式")
+                .font(.system(.caption, design: .rounded).weight(.semibold))
+                .foregroundColor(.secondary)
+                .frame(width: 80, alignment: .center)
+        }
+        .padding(.horizontal, 24)
+        .padding(.vertical, 8)
+        .background(Color(NSColor.controlBackgroundColor).opacity(0.5))
     }
 
     @ViewBuilder
@@ -278,19 +283,6 @@ struct PeersView: View {
         .padding(.vertical, 4)
         .padding(.horizontal, 8)
         .contentShape(Rectangle())
-        .opacity(peer.isStale ? 0.5 : 1.0)  // Gray out stale peers
-        .overlay(alignment: .topTrailing) {  // NEW: Stale indicator label
-            if peer.isStale {
-                Text("已断开")
-                    .font(.caption2)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(Color.gray.opacity(0.8))
-                    .foregroundColor(.white)
-                    .clipShape(Capsule())
-                    .offset(x: 8, y: -4)
-            }
-        }
         .hoverEffect()
         .listRowBackground(
             isLocal ? Color.accentColor.opacity(0.12) : Color.clear

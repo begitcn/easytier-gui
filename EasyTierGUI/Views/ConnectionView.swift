@@ -655,6 +655,7 @@ struct ConfigListSection: View {
         switch status {
         case .connected: return "checkmark.circle.fill"
         case .connecting: return "arrow.triangle.2.circlepath"
+        case .disconnecting: return "arrow.triangle.2.circlepath"
         case .disconnected: return "circle"
         case .error: return "exclamationmark.circle.fill"
         }
@@ -664,6 +665,7 @@ struct ConfigListSection: View {
         switch status {
         case .connected: return .green
         case .connecting: return .orange
+        case .disconnecting: return .orange
         case .disconnected: return .secondary
         case .error: return .red
         }
@@ -673,6 +675,7 @@ struct ConfigListSection: View {
         switch status {
         case .connected: return "运行中"
         case .connecting: return "连接中"
+        case .disconnecting: return "断开中"
         case .disconnected: return ""
         case .error: return "连接失败"
         }
@@ -694,6 +697,26 @@ struct ConfigListSection: View {
             .foregroundColor(statusColor(for: status))
             .clipShape(Capsule())
         case .connecting:
+            HStack(spacing: 4) {
+                Image(systemName: statusIcon(for: status))
+                    .font(.system(size: 8))
+                    .rotationEffect(.degrees(isAnimating ? 360 : 0))
+                    .animation(
+                        .linear(duration: 1.5)
+                        .repeatForever(autoreverses: false),
+                        value: isAnimating
+                    )
+                Text(statusText(for: status))
+            }
+            .font(.system(size: 9, weight: .medium))
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(statusColor(for: status).opacity(0.15))
+            .foregroundColor(statusColor(for: status))
+            .clipShape(Capsule())
+            .onAppear { isAnimating = true }
+            .onDisappear { isAnimating = false }
+        case .disconnecting:
             HStack(spacing: 4) {
                 Image(systemName: statusIcon(for: status))
                     .font(.system(size: 8))

@@ -12,7 +12,7 @@ import SwiftUI
 
 /// 网络连接状态
 enum NetworkStatus: String, Identifiable {
-    case disconnected, connecting, connected, error
+    case disconnected, connecting, connected, disconnecting, error
 
     var id: String { rawValue }
 
@@ -22,6 +22,7 @@ enum NetworkStatus: String, Identifiable {
         case .disconnected: return .gray
         case .connecting: return .orange
         case .connected: return .green
+        case .disconnecting: return .orange
         case .error: return .red
         }
     }
@@ -32,6 +33,7 @@ enum NetworkStatus: String, Identifiable {
         case .disconnected: return "未连接"
         case .connecting: return "连接中..."
         case .connected: return "已连接"
+        case .disconnecting: return "断开中..."
         case .error: return "错误"
         }
     }
