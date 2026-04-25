@@ -1,85 +1,53 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
+milestone: v1.1
+milestone_name: Feature Enhancement
 status: milestone_complete
-last_updated: "2026-04-25T02:48:44.877Z"
+last_updated: "2026-04-25T03:30:00.000Z"
 progress:
-  total_phases: 3
-  completed_phases: 2
-  total_plans: 2
-  completed_plans: 2
-  percent: 67
+  total_phases: 4
+  completed_phases: 4
+  total_plans: 5
+  completed_plans: 5
+  percent: 100
 ---
 
 # Project State: EasyTier GUI
 
 **Last Updated:** 2026-04-25
-**Status:** Milestone complete
-
-## Status Summary
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│  EasyTier GUI - v1.1 Feature Enhancement                        │
-├─────────────────────────────────────────────────────────────────┤
-│  Milestone: ◐ EXECUTING                                         │
-│  Phases: 4/4 defined                                            │
-│  Plans: 1/1 complete (Phase 4 executed)                         │
-│  Requirements: 27 (Phase 4: 6 requirements complete)            │
-└─────────────────────────────────────────────────────────────────┘
-```
+**Status:** v1.1 Milestone Complete
 
 ## Project Reference
 
-See: .planning/ROADMAP.md (updated 2026-04-24)
+See: .planning/PROJECT.md (updated 2026-04-25)
 
 **Core value:** 程序稳定运行，交互响应及时，内存长期稳定
-
-## Current Phase
-
-v1.1 is in execution phase. Phase 4 complete:
-
-| Phase | Name | Requirements | Status |
-|-------|------|--------------|--------|
-| 4 | Config Import/Export Foundation | CONF-01~CONF-06 | ✅ Complete |
-| 5 | Network Statistics | STAT-01~STAT-05 | Pending |
-| 6 | Auto-Connect & Settings Backup | AUTO-01~AUTO-05, SETT-01~SETT-03 | Pending |
-| 7 | Advanced Settings & Quick-Connect | SETT-04~SETT-06, QUICK-01~QUICK-05 | Pending |
-
-## Phase 4 Execution Summary
-
-**Plan:** Not started
-
-**Completed Tasks:**
-
-1. ✅ Add excludePassword option to ConfigManager export methods
-2. ✅ Add export options UI with "Exclude password" menu
-3. ✅ Replace Alert with Toast for import/export feedback
-4. ✅ Update conflict handling to match D-03 (direct overwrite)
-
-**Requirements Covered:**
-
-- CONF-01: Export single config ✓
-- CONF-02: Import config ✓
-- CONF-03: Export all configs ✓
-- CONF-04: Schema validation (existing) ✓
-- CONF-05: Conflict handling (overwrite) ✓
-- CONF-06: Sensitive data handling ✓
+**Current focus:** Planning next milestone
 
 ## Milestone History
 
 | Version | Name | Date | Phases | Status |
 |---------|------|------|--------|--------|
 | v1.0 | Performance Optimization | 2026-04-24 | 3 | ✅ Shipped |
-| v1.1 | Feature Enhancement | In Progress | 4 | ◐ Executing |
+| v1.1 | Feature Enhancement | 2026-04-25 | 4 | ✅ Shipped |
+
+## v1.1 Summary
+
+**Phases:**
+- Phase 4: Config Import/Export — ✅ Complete
+- Phase 5: Network Statistics — ✅ Complete
+- Phase 6: Auto-Connect & Backup — ✅ Complete
+- Phase 7: Advanced Settings & Quick-Connect — ⏭️ Skipped
+
+**Key Accomplishments:**
+1. Config import/export with password exclusion option and Toast feedback
+2. Network topology visualization with latency color coding
+3. Auto-connect with network readiness check and retry mechanism
+4. Full backup/restore for configs and preferences
+
+**Requirements Implemented:** 19/27 (8 skipped in Phase 7)
 
 ---
 *State initialized: 2025-04-24*
 *v1.0 shipped: 2026-04-24*
-*v1.1 started: 2026-04-24*
-*v1.1 roadmap created: 2026-04-24*
-*Phase 4 planned: 2026-04-25*
-*Phase 4 executed: 2026-04-25*
-
-**Planned Phase:** 6 (auto-connect-settings-backup) — 2 plans — 2026-04-25T02:46:01.340Z
+*v1.1 shipped: 2026-04-25*
