@@ -332,6 +332,19 @@ class ProcessViewModel: ObservableObject {
         activeRuntime?.status ?? .disconnected
     }
 
+    /// Last connected config ID from UserDefaults
+    var lastConnectedConfigId: UUID? {
+        guard let string = UserDefaults.standard.string(forKey: "lastConnectedConfigId"),
+              let uuid = UUID(uuidString: string) else { return nil }
+        return uuid
+    }
+
+    /// Last connected config name
+    var lastConnectedConfigName: String? {
+        guard let id = lastConnectedConfigId else { return nil }
+        return configManager.configs.first(where: { $0.id == id })?.name
+    }
+
     var isAnyNetworkRunning: Bool {
         runtimes.values.contains(where: { $0.service.isRunning })
     }
@@ -387,6 +400,17 @@ class ProcessViewModel: ObservableObject {
             }
             await connect(configID: config.id)
         }
+    }
+
+    /// Connect to the last used configuration
+    func connectLastUsed() async -> Bool {
+        guard let configIdString = UserDefaults.standard.string(forKey: "lastConnectedConfigId"),
+              let configId = UUID(uuidString: configIdString),
+              configManager.configs.contains(where: { $0.id == configId }) else {
+            return false
+        }
+        await connect(configID: configId)
+        return true
     }
 
     func disconnectAll() async {
@@ -448,6 +472,11 @@ class ProcessViewModel: ObservableObject {
 
         await runtime.connect(config: config)
         refreshOverallStatus()
+
+        // Save last connected config ID for auto-connect
+        if runtime.status == .connected {
+            UserDefaults.standard.set(configID.uuidString, forKey: "lastConnectedConfigId")
+        }
 
         // Show toast with retry for authorization errors
         if runtime.status == .error, let error = runtime.errorMessage, error.contains("授权") || error.contains("权限") {
