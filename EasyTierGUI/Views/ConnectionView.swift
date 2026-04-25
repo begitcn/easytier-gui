@@ -236,15 +236,10 @@ struct ConfigListSection: View {
     @EnvironmentObject var vm: ProcessViewModel
     @State private var showValidationAlert = false
     @State private var validationMessage = ""
-    @State private var showExportSuccess = false
-    @State private var showImportError = false
-    @State private var importErrorMessage = ""
-    @State private var showExportAllSuccess = false
-    @State private var showImportSkipped = false
-    @State private var skippedConfigNames: [String] = []
     @State private var isConnectingAll = false
     @State private var isDisconnectingAll = false
     @State private var isAnimating = false
+    @State private var excludePasswordOnExport: Bool = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -331,7 +326,20 @@ struct ConfigListSection: View {
                     .buttonStyle(.plain)
                     .hoverEffect(normal: 1.0, hover: 0.85)
 
-                    Button(action: { exportAllConfigs() }) {
+                    Menu {
+                        Button {
+                            excludePasswordOnExport = false
+                            performExportAll()
+                        } label: {
+                            Label("导出全部（包含密码）", systemImage: "key")
+                        }
+                        Button {
+                            excludePasswordOnExport = true
+                            performExportAll()
+                        } label: {
+                            Label("导出全部（排除密码）", systemImage: "key.slash")
+                        }
+                    } label: {
                         HStack(spacing: 4) {
                             Image(systemName: "square.and.arrow.up")
                             Text("导出全部")
@@ -343,8 +351,7 @@ struct ConfigListSection: View {
                         .foregroundColor(.orange)
                         .cornerRadius(6)
                     }
-                    .buttonStyle(.plain)
-                    .hoverEffect(normal: 1.0, hover: 0.85)
+                    .menuStyle(.borderlessButton)
                     .disabled(vm.configManager.configs.isEmpty)
                     .opacity(vm.configManager.configs.isEmpty ? 0.5 : 1)
                 }
@@ -394,7 +401,20 @@ struct ConfigListSection: View {
                         // Action buttons
                         HStack(spacing: 6) {
                             // Export button
-                            Button(action: { exportConfig(config) }) {
+                            Menu {
+                                Button {
+                                    excludePasswordOnExport = false
+                                    performExportConfig(config)
+                                } label: {
+                                    Label("导出（包含密码）", systemImage: "key")
+                                }
+                                Button {
+                                    excludePasswordOnExport = true
+                                    performExportConfig(config)
+                                } label: {
+                                    Label("导出（排除密码）", systemImage: "key.slash")
+                                }
+                            } label: {
                                 Image(systemName: "arrow.up.doc")
                                     .font(.system(size: 12))
                                     .foregroundColor(.secondary)
@@ -402,8 +422,7 @@ struct ConfigListSection: View {
                                     .background(Color.secondary.opacity(0.08))
                                     .cornerRadius(6)
                             }
-                            .buttonStyle(.plain)
-                            .hoverEffect(scale: true)
+                            .menuStyle(.borderlessButton)
                             .help("导出此配置")
 
                             // Connect/Disconnect button
@@ -512,35 +531,13 @@ struct ConfigListSection: View {
         } message: {
             Text(validationMessage)
         }
-        .alert("导出成功", isPresented: $showExportSuccess) {
-            Button("好的", role: .cancel) {}
-        } message: {
-            Text("配置已成功导出")
-        }
-        .alert("导入失败", isPresented: $showImportError) {
-            Button("好的", role: .cancel) {}
-        } message: {
-            Text(importErrorMessage)
-        }
-        .alert("导出成功", isPresented: $showExportAllSuccess) {
-            Button("好的", role: .cancel) {}
-        } message: {
-            Text("所有配置已成功导出")
-        }
-        .alert("导入完成", isPresented: $showImportSkipped) {
-            Button("好的", role: .cancel) {
-                skippedConfigNames.removeAll()
-            }
-        } message: {
-            Text("部分配置已导入。\n以下重复配置已跳过：\n" + skippedConfigNames.map { "• \($0)" }.joined(separator: "\n"))
-        }
     }
 
     // MARK: - Import/Export Methods
 
     private func importConfig() {
         let panel = NSOpenPanel()
-        panel.allowsMultipleSelection = true  // 允许多选
+        panel.allowsMultipleSelection = true
         panel.canChooseDirectories = false
         panel.canCreateDirectories = false
         panel.allowedContentTypes = [.json]
@@ -549,53 +546,36 @@ struct ConfigListSection: View {
 
         if panel.runModal() == .OK, !panel.urls.isEmpty {
             var importedCount = 0
-            var skippedNames: [String] = []
 
             for url in panel.urls {
                 do {
-                    // 尝试导入配置（可能是单个或多个）
                     let configs = try vm.configManager.importConfigsFromAnyFormat(from: url)
-
                     for config in configs {
-                        // 检查是否与现有配置重复（networkName + networkPassword + serverURI 都相同）
-                        let isDuplicate = vm.configManager.configs.contains { existing in
-                            existing.networkName == config.networkName &&
-                            existing.networkPassword == config.networkPassword &&
-                            existing.serverURI == config.serverURI
+                        // D-03: 直接覆盖 — 检查相同 UUID 或名称的重复
+                        let existingIndex = vm.configManager.configs.firstIndex { existing in
+                            existing.id == config.id || existing.name == config.name
                         }
 
-                        if isDuplicate {
-                            skippedNames.append(config.name)
+                        if let index = existingIndex {
+                            vm.configManager.updateConfig(config, at: index)
                         } else {
-                            // 如果 ID 冲突，生成新 ID
-                            var newConfig = config
-                            if vm.configManager.configs.contains(where: { $0.id == config.id }) {
-                                newConfig.id = UUID()
-                            }
-                            vm.configManager.addConfig(newConfig)
-                            importedCount += 1
+                            vm.configManager.addConfig(config)
                         }
+                        importedCount += 1
                     }
                 } catch {
-                    importErrorMessage = "无法读取配置文件「\(url.lastPathComponent)」：\(error.localizedDescription)"
-                    showImportError = true
+                    vm.showToast("导入失败：\(error.localizedDescription)", type: .error)
+                    return
                 }
             }
 
-            // 显示导入结果
-            if importedCount > 0 && skippedNames.isEmpty {
-                showExportSuccess = true
-            } else if importedCount > 0 && !skippedNames.isEmpty {
-                skippedConfigNames = skippedNames
-                showImportSkipped = true
-            } else if importedCount == 0 && !skippedNames.isEmpty {
-                importErrorMessage = "所有 \(skippedNames.count) 个配置都已存在，已跳过导入。"
-                showImportError = true
+            if importedCount > 0 {
+                vm.showToast("已导入 \(importedCount) 个配置", type: .info)
             }
         }
     }
 
-    private func exportConfig(_ config: EasyTierConfig) {
+    private func performExportConfig(_ config: EasyTierConfig) {
         let panel = NSSavePanel()
         panel.allowedContentTypes = [.json]
         panel.title = "保存配置文件"
@@ -604,16 +584,15 @@ struct ConfigListSection: View {
 
         if panel.runModal() == .OK, let url = panel.url {
             do {
-                try vm.configManager.exportConfig(config, to: url)
-                showExportSuccess = true
+                try vm.configManager.exportConfig(config, to: url, excludePassword: excludePasswordOnExport)
+                vm.showToast("已导出配置「\(config.name)」", type: .info)
             } catch {
-                importErrorMessage = "导出失败：\(error.localizedDescription)"
-                showImportError = true
+                vm.showToast("导出失败：\(error.localizedDescription)", type: .error)
             }
         }
     }
 
-    private func exportAllConfigs() {
+    private func performExportAll() {
         let panel = NSSavePanel()
         panel.allowedContentTypes = [.json]
         panel.title = "导出所有配置"
@@ -622,11 +601,10 @@ struct ConfigListSection: View {
 
         if panel.runModal() == .OK, let url = panel.url {
             do {
-                try vm.configManager.exportAllConfigs(to: url)
-                showExportAllSuccess = true
+                try vm.configManager.exportAllConfigs(to: url, excludePassword: excludePasswordOnExport)
+                vm.showToast("已导出全部配置", type: .info)
             } catch {
-                importErrorMessage = "导出失败：\(error.localizedDescription)"
-                showImportError = true
+                vm.showToast("导出失败：\(error.localizedDescription)", type: .error)
             }
         }
     }

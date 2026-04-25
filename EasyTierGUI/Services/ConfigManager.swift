@@ -164,9 +164,13 @@ class ConfigManager: ObservableObject {
 
     // MARK: - Import/Export
 
-    /// 导出单个配置
-    func exportConfig(_ config: EasyTierConfig, to url: URL) throws {
-        let data = try encoder.encode(config)
+    /// 导出单个配置（可选排除密码）
+    func exportConfig(_ config: EasyTierConfig, to url: URL, excludePassword: Bool = false) throws {
+        var exportConfig = config
+        if excludePassword {
+            exportConfig.networkPassword = ""
+        }
+        let data = try encoder.encode(exportConfig)
         try data.write(to: url)
     }
 
@@ -176,9 +180,16 @@ class ConfigManager: ObservableObject {
         return try decoder.decode(EasyTierConfig.self, from: data)
     }
 
-    /// 导出所有配置
-    func exportAllConfigs(to url: URL) throws {
-        let data = try encoder.encode(configs)
+    /// 导出所有配置（可选排除密码）
+    func exportAllConfigs(to url: URL, excludePassword: Bool = false) throws {
+        let exportConfigs = excludePassword
+            ? configs.map { config -> EasyTierConfig in
+                var c = config
+                c.networkPassword = ""
+                return c
+            }
+            : configs
+        let data = try encoder.encode(exportConfigs)
         try data.write(to: url)
     }
 
