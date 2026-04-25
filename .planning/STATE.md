@@ -3,10 +3,10 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Feature Enhancement
 current_phase: null
-status: defining
+status: planning
 last_updated: "2026-04-24T12:00:00.000Z"
 progress:
-  total_phases: 0
+  total_phases: 4
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -16,7 +16,7 @@ progress:
 # Project State: EasyTier GUI
 
 **Last Updated:** 2026-04-24
-**Status:** Defining Requirements
+**Status:** Planning Phases
 
 ## Status Summary
 
@@ -24,27 +24,39 @@ progress:
 ┌─────────────────────────────────────────────────────────────────┐
 │  EasyTier GUI - v1.1 Feature Enhancement                        │
 ├─────────────────────────────────────────────────────────────────┤
-│  Milestone: ○ DEFINING                                          │
-│  Phases: 0/0 defined                                            │
+│  Milestone: ◐ PLANNING                                          │
+│  Phases: 4/4 defined                                            │
 │  Plans: 0/0 planned                                             │
+│  Requirements: 27 (0% covered)                                  │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-24)
+See: .planning/ROADMAP.md (updated 2026-04-24)
 
 **Core value:** 程序稳定运行，交互响应及时，内存长期稳定
-**Current focus:** Defining requirements for v1.1
+
+## Current Phase
+
+v1.1 is in planning phase. Four phases defined:
+
+| Phase | Name | Requirements | Status |
+|-------|------|--------------|--------|
+| 4 | Config Import/Export Foundation | CONF-01~CONF-06 | Pending |
+| 5 | Network Statistics | STAT-01~STAT-05 | Pending |
+| 6 | Auto-Connect & Settings Backup | AUTO-01~AUTO-05, SETT-01~SETT-03 | Pending |
+| 7 | Advanced Settings & Quick-Connect | SETT-04~SETT-06, QUICK-01~QUICK-05 | Pending |
 
 ## Milestone History
 
 | Version | Name | Date | Phases | Status |
 |---------|------|------|--------|--------|
 | v1.0 | Performance Optimization | 2026-04-24 | 3 | ✅ Shipped |
-| v1.1 | Feature Enhancement | In Progress | — | ○ Defining |
+| v1.1 | Feature Enhancement | In Progress | 4 | ◐ Planning |
 
 ---
 *State initialized: 2025-04-24*
 *v1.0 shipped: 2026-04-24*
 *v1.1 started: 2026-04-24*
+*v1.1 roadmap created: 2026-04-24*
