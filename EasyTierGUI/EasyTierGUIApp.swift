@@ -1,4 +1,5 @@
 import SwiftUI
+import Network
 
 private struct MainWindowAccessor: NSViewRepresentable {
     let onResolve: (NSWindow) -> Void
@@ -71,13 +72,24 @@ struct EasyTierGUIApp: App {
                 }
                 .onReceive(NotificationCenter.default.publisher(for: NSApplication.didFinishLaunchingNotification)) { _ in
                     let autoConnect = UserDefaults.standard.bool(forKey: "autoConnectOnLaunch")
-                    if autoConnect {
-                        Task {
-                            // Short delay to let the UI settle before connecting
-                            try? await Task.sleep(nanoseconds: 800_000_000)
-                            // Connect all networks
-                            await processVM.connectAll()
+                    guard autoConnect else { return }
+
+                    Task {
+                        // Wait for network ready with 30-second timeout
+                        let networkReady = await waitForNetworkReady(timeout: 30)
+
+                        if !networkReady {
+                            processVM.showToast(
+                                "网络未就绪，自动连接已取消",
+                                type: .warning,
+                                action: ToastAction(title: "重试") {
+                                    Task { await performAutoConnect(processVM: processVM) }
+                                }
+                            )
+                            return
                         }
+
+                        await performAutoConnect(processVM: processVM)
                     }
                 }
                 .onReceive(NotificationCenter.default.publisher(for: NSWindow.willCloseNotification)) { notification in
@@ -103,6 +115,53 @@ struct EasyTierGUIApp: App {
         Settings {
             SettingsView()
                 .environmentObject(processVM)
+        }
+    }
+
+    // MARK: - Auto-Connect Helpers
+
+    /// Perform auto-connect to last used configuration
+    private func performAutoConnect(processVM: ProcessViewModel) async {
+        // Short delay to let the UI settle
+        try? await Task.sleep(nanoseconds: 800_000_000)
+
+        // Try to connect last used config
+        let connected = await processVM.connectLastUsed()
+
+        if !connected {
+            // No last config or config no longer exists
+            // Fallback: connect all (existing behavior)
+            await processVM.connectAll()
+        }
+    }
+
+    /// Wait for network to become ready with timeout
+    /// Uses NWPathMonitor to detect network connectivity
+    private func waitForNetworkReady(timeout: TimeInterval) async -> Bool {
+        await withCheckedContinuation { continuation in
+            let monitor = NWPathMonitor()
+            var resumed = false
+
+            // Ensure we only resume once
+            let safeResume = { (result: Bool) in
+                guard !resumed else { return }
+                resumed = true
+                monitor.cancel()
+                continuation.resume(returning: result)
+            }
+
+            monitor.pathUpdateHandler = { path in
+                if path.status == .satisfied {
+                    safeResume(true)
+                }
+            }
+
+            monitor.start(queue: DispatchQueue.global())
+
+            // Timeout fallback
+            DispatchQueue.global().asyncAfter(deadline: .now() + timeout) {
+                safeResume(false)
+            }
         }
     }
 }
