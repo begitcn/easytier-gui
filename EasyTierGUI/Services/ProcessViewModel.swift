@@ -50,7 +50,9 @@ final class NetworkRuntime: ObservableObject, Identifiable {
                 } else {
                     self.status = .disconnected
                     self.stopPeerPolling()
-                    self.peers.removeAll()
+                    // Keep last known peers but mark as stale (D-09)
+                    // Setting lastUpdated to nil will make isStale return false,
+                    // but we want to preserve the data for display
                 }
                 self.onStateChange?()
             }
@@ -169,8 +171,13 @@ final class NetworkRuntime: ObservableObject, Identifiable {
         service.fetchPeers(rpcPortalPort: port) { [weak self] newPeers in
             DispatchQueue.main.async {
                 guard let self = self else { return }
+                let now = Date()
                 if self.peers != newPeers {
-                    self.peers = newPeers
+                    self.peers = newPeers.map { peer in
+                        var updatedPeer = peer
+                        updatedPeer.lastUpdated = now
+                        return updatedPeer
+                    }
                     self.onStateChange?()
                 }
             }
