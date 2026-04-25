@@ -64,11 +64,9 @@
 
 ### Phase 7: Advanced Settings & Quick-Connect
 **Requirements:** SETT-04, SETT-05, SETT-06, QUICK-01, QUICK-02, QUICK-03, QUICK-04, QUICK-05
-**Status:** Pending
+**Status:** ⏭️ Skipped (2026-04-25)
 
-- Advanced protocol/logging/network options UI
-- Menu bar quick-connect submenu
-- URL scheme registration with validation
+User decided not to implement advanced settings and quick-connect features.
 
 </details>
 
@@ -81,7 +79,7 @@
 | 4 | Config I/O | CONF-01~CONF-06 | Pending |
 | 5 | Network Stats | STAT-01~STAT-05 | ✅ Complete (2026-04-25) |
 | 6 | Auto-Connect & Backup | AUTO-01~AUTO-05, SETT-01~SETT-03 | Pending |
-| 7 | Advanced Settings & Quick-Connect | SETT-04~SETT-06, QUICK-01~QUICK-05 | Pending |
+| 7 | Advanced Settings & Quick-Connect | SETT-04~SETT-06, QUICK-01~QUICK-05 | ⏭️ Skipped (2026-04-25) |
 
 **v1.1 Coverage:** 27/27 requirements (100%)
 
